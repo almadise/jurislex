@@ -1,39 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from '@/components/ui/AppIcon';
 import StatusBadge from '@/components/ui/StatusBadge';
 import type { Matter } from './CaseManagementContent';
+import { caseService } from '@/lib/services/caseService';
 
 interface CaseDetailPanelProps {
   matter: Matter;
   onClose: () => void;
 }
-
-const mockTimeline = [
-  { id: 'ev-001', date: '17/07/2026', time: '10:34', type: 'analysis', label: 'Analyse de situation lancée', user: 'Fotso Mbarga' },
-  { id: 'ev-002', date: '15/07/2026', time: '14:12', type: 'document', label: 'Mise en demeure générée et exportée en PDF', user: 'Fotso Mbarga' },
-  { id: 'ev-003', date: '12/07/2026', time: '09:22', type: 'search', label: 'Recherche : Art. 40-42 Code du Travail', user: 'Fotso Mbarga' },
-  { id: 'ev-004', date: '08/07/2026', time: '16:50', type: 'qa', label: 'Q&A : obligations employeur licenciement économique', user: 'Fotso Mbarga' },
-  { id: 'ev-005', date: '02/07/2026', time: '11:00', type: 'create', label: 'Dossier créé', user: 'Fotso Mbarga' },
-];
-
-const mockDocuments = [
-  { id: 'doc-001', name: 'Mise en demeure — 15/07/2026', type: 'docx', size: '24 Ko', date: '15/07/2026' },
-];
-
-const mockParties = [
-  { id: 'party-001', name: 'Mme Nkeng Abanda', quality: 'Salariée — Demanderesse', contact: 'nkeng.abanda@email.cm' },
-  { id: 'party-002', name: 'SARL Fotso & Associés', quality: 'Employeur — Défendeur', contact: 'contact@fotso-associes.cm' },
-];
-
-const mockEvidence = [
-  { id: 'ev-p-001', name: 'Lettre de licenciement', status: 'to_gather' as const, notes: 'À demander à l\'employeur' },
-  { id: 'ev-p-002', name: 'Contrat de travail signé', status: 'to_gather' as const, notes: '' },
-  { id: 'ev-p-003', name: 'Attestation de travail', status: 'available' as const, notes: 'Reçue le 29/05/2026' },
-  { id: 'ev-p-004', name: 'Bulletins de salaire (12 mois)', status: 'to_gather' as const, notes: '' },
-  { id: 'ev-p-005', name: 'PV consultation délégués du personnel', status: 'missing' as const, notes: 'Probablement inexistant' },
-];
 
 const evidenceStatusConfig = {
   available: { label: 'Disponible', className: 'bg-green-100 text-green-700', icon: 'CheckCircleIcon' },
@@ -47,10 +23,62 @@ const timelineTypeConfig = {
   search: { icon: 'MagnifyingGlassIcon', color: 'bg-green-100 text-green-600' },
   qa: { icon: 'ChatBubbleLeftRightIcon', color: 'bg-amber-100 text-amber-600' },
   create: { icon: 'FolderPlusIcon', color: 'bg-primary/10 text-primary' },
+  update: { icon: 'PencilSquareIcon', color: 'bg-gray-100 text-gray-600' },
+  note: { icon: 'ChatBubbleBottomCenterTextIcon', color: 'bg-indigo-100 text-indigo-600' },
 };
 
 export default function CaseDetailPanel({ matter, onClose }: CaseDetailPanelProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'parties' | 'analyses' | 'documents'>('overview');
+
+  const [timeline, setTimeline] = useState<any[]>([]);
+  const [parties, setParties] = useState<any[]>([]);
+  const [evidence, setEvidence] = useState<any[]>([]);
+  const [analyses, setAnalyses] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [tabLoading, setTabLoading] = useState(false);
+
+  useEffect(() => {
+    setTimeline([]);
+    setParties([]);
+    setEvidence([]);
+    setAnalyses([]);
+    setDocuments([]);
+    setActiveTab('overview');
+  }, [matter.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setTabLoading(true);
+      try {
+        if (activeTab === 'timeline' && timeline.length === 0) {
+          const data = await caseService.getTimeline(matter.id);
+          if (!cancelled) setTimeline(data);
+        } else if (activeTab === 'parties' && parties.length === 0) {
+          const [p, e] = await Promise.all([
+            caseService.getParties(matter.id),
+            caseService.getEvidence(matter.id),
+          ]);
+          if (!cancelled) {
+            setParties(p);
+            setEvidence(e);
+          }
+        } else if (activeTab === 'analyses' && analyses.length === 0) {
+          const data = await caseService.getAnalyses(matter.id);
+          if (!cancelled) setAnalyses(data);
+        } else if (activeTab === 'documents' && documents.length === 0) {
+          const data = await caseService.getDocuments(matter.id);
+          if (!cancelled) setDocuments(data);
+        }
+      } finally {
+        if (!cancelled) setTabLoading(false);
+      }
+    };
+
+    load();
+    return () => { cancelled = true; };
+  }, [activeTab, matter.id]);
 
   const tabs = [
     { id: 'overview', label: 'Aperçu', icon: 'InformationCircleIcon' },
@@ -59,6 +87,14 @@ export default function CaseDetailPanel({ matter, onClose }: CaseDetailPanelProp
     { id: 'analyses', label: 'Analyses', icon: 'DocumentMagnifyingGlassIcon' },
     { id: 'documents', label: 'Documents', icon: 'DocumentTextIcon' },
   ] as const;
+
+  const LoadingSkeleton = () => (
+    <div className="space-y-3 animate-pulse">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="h-12 bg-muted rounded-lg" />
+      ))}
+    </div>
+  );
 
   return (
     <div className="card h-full flex flex-col overflow-hidden">
@@ -170,7 +206,14 @@ export default function CaseDetailPanel({ matter, onClose }: CaseDetailPanelProp
               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">Responsable</p>
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 bg-accent rounded-full flex items-center justify-center">
-                  <span className="text-white text-[10px] font-bold">FM</span>
+                  <span className="text-white text-[10px] font-bold">
+                    {matter.assignedTo
+                      .split(' ')
+                      .map((w) => w[0])
+                      .join('')
+                      .slice(0, 2)
+                      .toUpperCase()}
+                  </span>
                 </div>
                 <p className="text-sm text-foreground">{matter.assignedTo}</p>
               </div>
@@ -180,131 +223,143 @@ export default function CaseDetailPanel({ matter, onClose }: CaseDetailPanelProp
 
         {activeTab === 'timeline' && (
           <div className="fade-in">
-            <div className="relative">
-              <div className="absolute left-4 top-0 bottom-0 w-px bg-border" />
-              <div className="space-y-4 pl-10">
-                {mockTimeline.map((event) => {
-                  const config = timelineTypeConfig[event.type as keyof typeof timelineTypeConfig];
-                  return (
-                    <div key={event.id} className="relative">
-                      <div className={`absolute -left-6 w-8 h-8 rounded-full flex items-center justify-center ${config.color}`}>
-                        <Icon name={config.icon as Parameters<typeof Icon>[0]['name']} size={14} />
-                      </div>
-                      <div className="pb-4">
-                        <p className="text-xs font-medium text-foreground">{event.label}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <p className="text-[11px] text-muted-foreground font-mono-ref">{event.date} à {event.time}</p>
-                          <span className="text-muted-foreground">·</span>
-                          <p className="text-[11px] text-muted-foreground">{event.user}</p>
+            {tabLoading ? (
+              <LoadingSkeleton />
+            ) : timeline.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Aucun événement enregistré.</p>
+            ) : (
+              <div className="relative">
+                <div className="absolute left-4 top-0 bottom-0 w-px bg-border" />
+                <div className="space-y-4 pl-10">
+                  {timeline.map((event) => {
+                    const config = timelineTypeConfig[event.type as keyof typeof timelineTypeConfig] ?? timelineTypeConfig.note;
+                    return (
+                      <div key={event.id} className="relative">
+                        <div className={`absolute -left-6 w-8 h-8 rounded-full flex items-center justify-center ${config.color}`}>
+                          <Icon name={config.icon as Parameters<typeof Icon>[0]['name']} size={14} />
+                        </div>
+                        <div className="pb-4">
+                          <p className="text-xs font-medium text-foreground">{event.label}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-[11px] text-muted-foreground font-mono-ref">{event.date} à {event.time}</p>
+                            <span className="text-muted-foreground">·</span>
+                            <p className="text-[11px] text-muted-foreground">{event.user}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
         {activeTab === 'parties' && (
           <div className="space-y-4 fade-in">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Parties</p>
-              <div className="space-y-2">
-                {mockParties.map((party) => (
-                  <div key={party.id} className="p-3 bg-muted/50 rounded-lg border border-border">
-                    <p className="text-sm font-semibold text-foreground">{party.name}</p>
-                    <p className="text-xs text-muted-foreground">{party.quality}</p>
-                    <p className="text-xs text-primary mt-1">{party.contact}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Preuves</p>
-              <div className="space-y-2">
-                {mockEvidence.map((ev) => {
-                  const config = evidenceStatusConfig[ev.status];
-                  return (
-                    <div key={ev.id} className="flex items-start gap-2 p-2.5 bg-muted/50 rounded-lg border border-border">
-                      <Icon name={config.icon as Parameters<typeof Icon>[0]['name']} size={14} className={config.className.split(' ')[1]} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-foreground">{ev.name}</p>
-                        {ev.notes && <p className="text-[11px] text-muted-foreground">{ev.notes}</p>}
-                      </div>
-                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 ${config.className}`}>
-                        {config.label}
-                      </span>
+            {tabLoading ? (
+              <LoadingSkeleton />
+            ) : (
+              <>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Parties</p>
+                  {parties.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Aucune partie enregistrée.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {parties.map((party) => (
+                        <div key={party.id} className="p-3 bg-muted/50 rounded-lg border border-border">
+                          <p className="text-sm font-semibold text-foreground">{party.name}</p>
+                          <p className="text-xs text-muted-foreground">{party.quality}</p>
+                          {party.contact && <p className="text-xs text-primary mt-1">{party.contact}</p>}
+                        </div>
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
-            </div>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Preuves</p>
+                  {evidence.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Aucune pièce enregistrée.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {evidence.map((ev) => {
+                        const config = evidenceStatusConfig[ev.status as keyof typeof evidenceStatusConfig] ?? evidenceStatusConfig.to_gather;
+                        return (
+                          <div key={ev.id} className="flex items-start gap-2 p-2.5 bg-muted/50 rounded-lg border border-border">
+                            <Icon name={config.icon as Parameters<typeof Icon>[0]['name']} size={14} className={config.className.split(' ')[1]} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium text-foreground">{ev.name}</p>
+                              {ev.notes && <p className="text-[11px] text-muted-foreground">{ev.notes}</p>}
+                            </div>
+                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 ${config.className}`}>
+                              {config.label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
 
         {activeTab === 'analyses' && (
           <div className="space-y-3 fade-in">
-            {[
-              { id: 'an-001', title: 'Analyse de licenciement économique', date: '17/07/2026', confidence: 72, risk: 'medium' as const },
-              { id: 'an-002', title: 'Q&A : obligations employeur', date: '08/07/2026', confidence: 88, risk: 'low' as const },
-              { id: 'an-003', title: 'Recherche Code du Travail Art. 40-42', date: '12/07/2026', confidence: 95, risk: 'low' as const },
-            ].map((analysis) => (
-              <div key={analysis.id} className="p-3 bg-muted/50 rounded-lg border border-border hover:border-primary/30 cursor-pointer transition-colors">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <p className="text-xs font-medium text-foreground">{analysis.title}</p>
-                  <StatusBadge type="risk" value={analysis.risk} size="sm" />
-                </div>
-                <div className="flex items-center gap-3">
-                  <p className="text-[11px] text-muted-foreground font-mono-ref">{analysis.date}</p>
-                  <div className="flex items-center gap-1 flex-1">
-                    <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+            {tabLoading ? (
+              <LoadingSkeleton />
+            ) : analyses.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Aucune analyse pour ce dossier.</p>
+            ) : (
+              analyses.map((an) => (
+                <div key={an.id} className="p-3 bg-muted/50 rounded-lg border border-border">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <p className="text-xs font-semibold text-foreground">{an.title}</p>
+                    <StatusBadge type="risk" value={an.risk} size="sm" />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-1.5 bg-border rounded-full overflow-hidden">
                       <div
                         className="h-full bg-primary rounded-full"
-                        style={{ width: `${analysis.confidence}%` }}
+                        style={{ width: `${an.confidence}%` }}
                       />
                     </div>
-                    <span className="text-[11px] text-muted-foreground tabular-nums">{analysis.confidence}%</span>
+                    <span className="text-[11px] font-mono-ref text-muted-foreground">{an.confidence}%</span>
                   </div>
+                  <p className="text-[11px] text-muted-foreground mt-1 font-mono-ref">{an.date}</p>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         )}
 
         {activeTab === 'documents' && (
-          <div className="space-y-3 fade-in">
-            {mockDocuments.length === 0 ? (
-              <div className="flex flex-col items-center py-8 text-center">
-                <Icon name="DocumentTextIcon" size={32} className="text-muted-foreground mb-2" />
-                <p className="text-sm font-semibold text-foreground">Aucun document généré</p>
-                <p className="text-xs text-muted-foreground mb-4">Générez votre premier document pour ce dossier.</p>
-                <button className="btn-primary text-xs">
-                  <Icon name="PlusIcon" size={14} />
-                  Générer un document
-                </button>
-              </div>
+          <div className="space-y-2 fade-in">
+            {tabLoading ? (
+              <LoadingSkeleton />
+            ) : documents.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Aucun document généré.</p>
             ) : (
-              mockDocuments.map((doc) => (
+              documents.map((doc) => (
                 <div key={doc.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border">
                   <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                     <Icon name="DocumentTextIcon" size={16} className="text-blue-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-foreground">{doc.name}</p>
-                    <p className="text-[11px] text-muted-foreground">{doc.type.toUpperCase()} · {doc.size} · {doc.date}</p>
+                    <p className="text-xs font-medium text-foreground truncate">{doc.name}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {doc.type?.toUpperCase()} · {doc.size} · {doc.date}
+                    </p>
                   </div>
-                  <button className="p-1.5 rounded hover:bg-muted transition-colors" aria-label="Télécharger le document">
+                  <button className="btn-ghost p-1.5" aria-label="Télécharger">
                     <Icon name="ArrowDownTrayIcon" size={14} className="text-muted-foreground" />
                   </button>
                 </div>
               ))
             )}
-            <button className="btn-secondary w-full justify-center text-xs">
-              <Icon name="PlusIcon" size={14} />
-              Générer un nouveau document
-            </button>
           </div>
         )}
       </div>

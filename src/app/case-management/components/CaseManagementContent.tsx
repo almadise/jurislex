@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Icon from '@/components/ui/AppIcon';
 import StatusBadge from '@/components/ui/StatusBadge';
 import CaseDetailPanel from './CaseDetailPanel';
 import NewCaseModal from './NewCaseModal';
+import { caseService } from '@/lib/services/caseService';
 import { toast } from 'sonner';
 
 export interface Matter {
@@ -23,159 +24,6 @@ export interface Matter {
   tags: string[];
 }
 
-const mockMatters: Matter[] = [
-  {
-    id: 'matter-001',
-    reference: 'DOS-2026-0142',
-    title: 'Licenciement abusif — Nkeng Abanda c/ SARL Fotso & Associés',
-    domain: 'Droit du travail',
-    parties: ['Mme Nkeng Abanda', 'SARL Fotso & Associés'],
-    status: 'analysis',
-    analyses: 3,
-    documents: 1,
-    lastActivity: '17/07/2026',
-    createdAt: '02/07/2026',
-    assignedTo: 'Fotso Mbarga',
-    riskLevel: 'medium',
-    tags: ['licenciement', 'indemnités', 'urgent'],
-  },
-  {
-    id: 'matter-002',
-    reference: 'DOS-2026-0138',
-    title: 'Recouvrement de créance — SARL Tchouaffe Import c/ Ets Biya Négoce',
-    domain: 'Droit commercial OHADA',
-    parties: ['SARL Tchouaffe Import', 'Ets Biya Négoce'],
-    status: 'documented',
-    analyses: 5,
-    documents: 3,
-    lastActivity: '15/07/2026',
-    createdAt: '18/06/2026',
-    assignedTo: 'Fotso Mbarga',
-    riskLevel: 'low',
-    tags: ['recouvrement', 'injonction de payer', 'OHADA'],
-  },
-  {
-    id: 'matter-003',
-    reference: 'DOS-2026-0131',
-    title: 'Cession de parts sociales — SARL Abanda & Fils',
-    domain: 'Droit des sociétés',
-    parties: ['M. Abanda Jean-Pierre', 'Mme Abanda Christelle'],
-    status: 'active',
-    analyses: 2,
-    documents: 2,
-    lastActivity: '12/07/2026',
-    createdAt: '05/06/2026',
-    assignedTo: 'Fotso Mbarga',
-    riskLevel: 'low',
-    tags: ['cession', 'sociétés', 'OHADA'],
-  },
-  {
-    id: 'matter-004',
-    reference: 'DOS-2026-0127',
-    title: 'Litige foncier — Succession Nkeng c/ Administration',
-    domain: 'Droit foncier',
-    parties: ['Succession Nkeng', 'Ministère des Domaines'],
-    status: 'active',
-    analyses: 4,
-    documents: 0,
-    lastActivity: '10/07/2026',
-    createdAt: '28/05/2026',
-    assignedTo: 'Fotso Mbarga',
-    riskLevel: 'high',
-    tags: ['foncier', 'succession', 'recours administratif'],
-  },
-  {
-    id: 'matter-005',
-    reference: 'DOS-2026-0119',
-    title: 'Rupture de contrat commercial — SARL Biya Tech c/ SARL Nguemo Solutions',
-    domain: 'Droit commercial OHADA',
-    parties: ['SARL Biya Tech', 'SARL Nguemo Solutions'],
-    status: 'closed',
-    analyses: 6,
-    documents: 4,
-    lastActivity: '01/07/2026',
-    createdAt: '14/04/2026',
-    assignedTo: 'Fotso Mbarga',
-    riskLevel: 'medium',
-    tags: ['rupture de contrat', 'dommages-intérêts'],
-  },
-  {
-    id: 'matter-006',
-    reference: 'DOS-2026-0115',
-    title: 'Accidents du travail — M. Kamdem Sylvestre c/ SA Cameroun Industries',
-    domain: 'Droit du travail',
-    parties: ['M. Kamdem Sylvestre', 'SA Cameroun Industries'],
-    status: 'analysis',
-    analyses: 2,
-    documents: 1,
-    lastActivity: '08/07/2026',
-    createdAt: '10/04/2026',
-    assignedTo: 'Fotso Mbarga',
-    riskLevel: 'high',
-    tags: ['accident de travail', 'réparation', 'CNPS'],
-  },
-  {
-    id: 'matter-007',
-    reference: 'DOS-2026-0108',
-    title: 'Constitution de SARL — Projet Mbarga & Associés',
-    domain: 'Droit des sociétés',
-    parties: ['M. Mbarga Eric', 'Mme Essomba Diane'],
-    status: 'draft',
-    analyses: 1,
-    documents: 0,
-    lastActivity: '05/07/2026',
-    createdAt: '03/07/2026',
-    assignedTo: 'Fotso Mbarga',
-    riskLevel: 'low',
-    tags: ['création société', 'SARL', 'OHADA'],
-  },
-  {
-    id: 'matter-008',
-    reference: 'DOS-2026-0094',
-    title: 'Litige locatif commercial — Ets Fouda Immobilier c/ SARL Ngono Retail',
-    domain: 'Droit civil',
-    parties: ['Ets Fouda Immobilier', 'SARL Ngono Retail'],
-    status: 'documented',
-    analyses: 3,
-    documents: 2,
-    lastActivity: '28/06/2026',
-    createdAt: '12/03/2026',
-    assignedTo: 'Fotso Mbarga',
-    riskLevel: 'medium',
-    tags: ['bail commercial', 'expulsion', 'loyers impayés'],
-  },
-  {
-    id: 'matter-009',
-    reference: 'DOS-2025-0287',
-    title: 'Contentieux bancaire — M. Tagne Hervé c/ Afriland First Bank',
-    domain: 'Droit bancaire COBAC',
-    parties: ['M. Tagne Hervé', 'Afriland First Bank'],
-    status: 'archived',
-    analyses: 8,
-    documents: 5,
-    lastActivity: '15/03/2026',
-    createdAt: '10/10/2025',
-    assignedTo: 'Fotso Mbarga',
-    riskLevel: 'low',
-    tags: ['crédit', 'saisie', 'COBAC'],
-  },
-  {
-    id: 'matter-010',
-    reference: 'DOS-2026-0102',
-    title: 'Contrefaçon de marque — SARL Kenfack Design c/ Ets Njoya Copies',
-    domain: 'Droit de la propriété intellectuelle',
-    parties: ['SARL Kenfack Design', 'Ets Njoya Copies'],
-    status: 'active',
-    analyses: 2,
-    documents: 1,
-    lastActivity: '04/07/2026',
-    createdAt: '20/05/2026',
-    assignedTo: 'Fotso Mbarga',
-    riskLevel: 'medium',
-    tags: ['contrefaçon', 'marque', 'OAPI'],
-  },
-];
-
 const domainColors: Record<string, string> = {
   'Droit du travail': 'bg-green-100 text-green-700',
   'Droit commercial OHADA': 'bg-blue-100 text-blue-700',
@@ -187,7 +35,9 @@ const domainColors: Record<string, string> = {
 };
 
 export default function CaseManagementContent() {
-  const [matters, setMatters] = useState<Matter[]>(mockMatters);
+  const [matters, setMatters] = useState<Matter[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedMatter, setSelectedMatter] = useState<Matter | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -196,6 +46,23 @@ export default function CaseManagementContent() {
   const [showNewCaseModal, setShowNewCaseModal] = useState(false);
   const [sortField, setSortField] = useState<keyof Matter>('lastActivity');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  const fetchMatters = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await caseService.getAll();
+      setMatters(data);
+    } catch (err: any) {
+      setError(err.message ?? 'Erreur lors du chargement des dossiers.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMatters();
+  }, [fetchMatters]);
 
   const filtered = matters.filter((m) => {
     const matchesSearch =
@@ -231,12 +98,34 @@ export default function CaseManagementContent() {
     }
   };
 
-  const handleBulkClose = () => {
-    setMatters((prev) =>
-      prev.map((m) => (selectedIds.includes(m.id) ? { ...m, status: 'closed' as const } : m))
-    );
-    toast.success(`${selectedIds.length} dossier${selectedIds.length > 1 ? 's' : ''} clôturé${selectedIds.length > 1 ? 's' : ''}`);
-    setSelectedIds([]);
+  const handleBulkClose = async () => {
+    try {
+      await caseService.updateStatus(selectedIds, 'closed');
+      setMatters((prev) =>
+        prev.map((m) => (selectedIds.includes(m.id) ? { ...m, status: 'closed' as const } : m))
+      );
+      toast.success(
+        `${selectedIds.length} dossier${selectedIds.length > 1 ? 's' : ''} clôturé${selectedIds.length > 1 ? 's' : ''}`
+      );
+      setSelectedIds([]);
+    } catch {
+      toast.error('Erreur lors de la clôture des dossiers.');
+    }
+  };
+
+  const handleBulkArchive = async () => {
+    try {
+      await caseService.updateStatus(selectedIds, 'archived');
+      setMatters((prev) =>
+        prev.map((m) => (selectedIds.includes(m.id) ? { ...m, status: 'archived' as const } : m))
+      );
+      toast.success(
+        `${selectedIds.length} dossier${selectedIds.length > 1 ? 's' : ''} archivé${selectedIds.length > 1 ? 's' : ''}`
+      );
+      setSelectedIds([]);
+    } catch {
+      toast.error('Erreur lors de l\'archivage des dossiers.');
+    }
   };
 
   const statusOptions = [
@@ -255,10 +144,13 @@ export default function CaseManagementContent() {
   ];
 
   const SortIcon = ({ field }: { field: keyof Matter }) => {
-    if (sortField !== field) return <Icon name="ChevronUpDownIcon" size={14} className="text-muted-foreground/50" />;
-    return sortDir === 'asc'
-      ? <Icon name="ChevronUpIcon" size={14} className="text-primary" />
-      : <Icon name="ChevronDownIcon" size={14} className="text-primary" />;
+    if (sortField !== field)
+      return <Icon name="ChevronUpDownIcon" size={14} className="text-muted-foreground/50" />;
+    return sortDir === 'asc' ? (
+      <Icon name="ChevronUpIcon" size={14} className="text-primary" />
+    ) : (
+      <Icon name="ChevronDownIcon" size={14} className="text-primary" />
+    );
   };
 
   const columns: { key: keyof Matter; label: string; sortable?: boolean }[] = [
@@ -279,17 +171,27 @@ export default function CaseManagementContent() {
         <div>
           <h1 className="page-title">Gestion des dossiers</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {matters.length} dossier{matters.length > 1 ? 's' : ''} — {matters.filter((m) => m.status === 'active' || m.status === 'analysis').length} actif{matters.filter((m) => m.status === 'active' || m.status === 'analysis').length > 1 ? 's' : ''}
+            {loading
+              ? 'Chargement...'
+              : `${matters.length} dossier${matters.length > 1 ? 's' : ''} — ${matters.filter((m) => m.status === 'active' || m.status === 'analysis').length} actif${matters.filter((m) => m.status === 'active' || m.status === 'analysis').length > 1 ? 's' : ''}`}
           </p>
         </div>
-        <button
-          onClick={() => setShowNewCaseModal(true)}
-          className="btn-primary"
-        >
+        <button onClick={() => setShowNewCaseModal(true)} className="btn-primary">
           <Icon name="PlusIcon" size={16} />
           Nouveau dossier
         </button>
       </div>
+
+      {/* Error state */}
+      {error && (
+        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <Icon name="ExclamationTriangleIcon" size={18} className="text-red-500 flex-shrink-0" />
+          <p className="text-sm text-red-700">{error}</p>
+          <button onClick={fetchMatters} className="ml-auto btn-secondary text-xs">
+            Réessayer
+          </button>
+        </div>
+      )}
 
       {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-3">
@@ -302,7 +204,11 @@ export default function CaseManagementContent() {
           { label: 'Total documents', count: matters.reduce((s, m) => s + m.documents, 0), color: 'text-foreground', bg: 'bg-muted' },
         ].map((stat) => (
           <div key={`stat-${stat.label}`} className={`card p-3 ${stat.bg} border-0`}>
-            <p className={`text-2xl font-bold tabular-nums ${stat.color}`}>{stat.count}</p>
+            {loading ? (
+              <div className="h-8 w-8 bg-current/10 rounded animate-pulse mb-1" />
+            ) : (
+              <p className={`text-2xl font-bold tabular-nums ${stat.color}`}>{stat.count}</p>
+            )}
             <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
           </div>
         ))}
@@ -314,7 +220,11 @@ export default function CaseManagementContent() {
           {/* Toolbar */}
           <div className="flex items-center gap-3 p-4 border-b border-border flex-wrap">
             <div className="relative flex-1 min-w-[200px]">
-              <Icon name="MagnifyingGlassIcon" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <Icon
+                name="MagnifyingGlassIcon"
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+              />
               <input
                 type="text"
                 value={searchQuery}
@@ -331,7 +241,9 @@ export default function CaseManagementContent() {
               aria-label="Filtrer par statut"
             >
               {statusOptions.map((o) => (
-                <option key={`status-opt-${o.value}`} value={o.value}>{o.label}</option>
+                <option key={`status-opt-${o.value}`} value={o.value}>
+                  {o.label}
+                </option>
               ))}
             </select>
             <select
@@ -341,7 +253,9 @@ export default function CaseManagementContent() {
               aria-label="Filtrer par domaine"
             >
               {domainOptions.map((o) => (
-                <option key={`domain-opt-${o.value}`} value={o.value}>{o.label}</option>
+                <option key={`domain-opt-${o.value}`} value={o.value}>
+                  {o.label}
+                </option>
               ))}
             </select>
             <span className="text-xs text-muted-foreground font-mono-ref ml-auto">
@@ -359,13 +273,7 @@ export default function CaseManagementContent() {
                 <Icon name="CheckCircleIcon" size={14} />
                 Clôturer
               </button>
-              <button
-                onClick={() => {
-                  toast.success(`${selectedIds.length} dossier${selectedIds.length > 1 ? 's' : ''} archivé${selectedIds.length > 1 ? 's' : ''}`);
-                  setSelectedIds([]);
-                }}
-                className="btn-ghost text-xs text-muted-foreground"
-              >
+              <button onClick={handleBulkArchive} className="btn-ghost text-xs text-muted-foreground">
                 <Icon name="ArchiveBoxIcon" size={14} />
                 Archiver
               </button>
@@ -417,14 +325,35 @@ export default function CaseManagementContent() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 ? (
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={`skel-${i}`} className="border-b border-border">
+                      <td className="px-4 py-3">
+                        <div className="w-4 h-4 bg-muted rounded animate-pulse" />
+                      </td>
+                      {columns.map((col) => (
+                        <td key={`skel-col-${col.key}`} className="px-4 py-3">
+                          <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
+                        </td>
+                      ))}
+                      <td className="px-4 py-3">
+                        <div className="h-4 bg-muted rounded animate-pulse w-16" />
+                      </td>
+                    </tr>
+                  ))
+                ) : filtered.length === 0 ? (
                   <tr>
                     <td colSpan={columns.length + 2} className="text-center py-16">
                       <div className="flex flex-col items-center gap-3">
                         <Icon name="FolderOpenIcon" size={36} className="text-muted-foreground" />
                         <p className="text-sm font-semibold text-foreground">Aucun dossier trouvé</p>
-                        <p className="text-xs text-muted-foreground">Modifiez vos filtres ou créez un nouveau dossier.</p>
-                        <button onClick={() => setShowNewCaseModal(true)} className="btn-primary text-xs">
+                        <p className="text-xs text-muted-foreground">
+                          Modifiez vos filtres ou créez un nouveau dossier.
+                        </p>
+                        <button
+                          onClick={() => setShowNewCaseModal(true)}
+                          className="btn-primary text-xs"
+                        >
                           <Icon name="PlusIcon" size={14} />
                           Nouveau dossier
                         </button>
@@ -441,23 +370,30 @@ export default function CaseManagementContent() {
                           : idx % 2 === 0
                           ? 'bg-card hover:bg-muted/30' :'bg-muted/10 hover:bg-muted/30'
                       }`}
-                      onClick={() => setSelectedMatter(selectedMatter?.id === matter.id ? null : matter)}
+                      onClick={() =>
+                        setSelectedMatter(selectedMatter?.id === matter.id ? null : matter)
+                      }
                     >
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <div
                           className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-colors ${
-                            selectedIds.includes(matter.id) ? 'bg-primary border-primary' : 'border-border hover:border-primary/50'
+                            selectedIds.includes(matter.id)
+                              ? 'bg-primary border-primary' :'border-border hover:border-primary/50'
                           }`}
                           onClick={() => toggleSelect(matter.id)}
                           role="checkbox"
                           aria-checked={selectedIds.includes(matter.id)}
                           aria-label={`Sélectionner ${matter.reference}`}
                         >
-                          {selectedIds.includes(matter.id) && <Icon name="CheckIcon" size={10} className="text-white" />}
+                          {selectedIds.includes(matter.id) && (
+                            <Icon name="CheckIcon" size={10} className="text-white" />
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="font-mono-ref text-xs font-medium text-primary">{matter.reference}</span>
+                        <span className="font-mono-ref text-xs font-medium text-primary">
+                          {matter.reference}
+                        </span>
                       </td>
                       <td className="px-4 py-3 max-w-[260px]">
                         <p className="text-sm font-medium text-foreground truncate">{matter.title}</p>
@@ -466,7 +402,9 @@ export default function CaseManagementContent() {
                         </p>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${domainColors[matter.domain] || 'bg-gray-100 text-gray-600'}`}>
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${domainColors[matter.domain] || 'bg-gray-100 text-gray-600'}`}
+                        >
                           {matter.domain}
                         </span>
                       </td>
@@ -477,13 +415,19 @@ export default function CaseManagementContent() {
                         <StatusBadge type="risk" value={matter.riskLevel} size="sm" />
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-sm font-mono-ref tabular-nums text-foreground">{matter.analyses}</span>
+                        <span className="text-sm font-mono-ref tabular-nums text-foreground">
+                          {matter.analyses}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-sm font-mono-ref tabular-nums text-foreground">{matter.documents}</span>
+                        <span className="text-sm font-mono-ref tabular-nums text-foreground">
+                          {matter.documents}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-xs text-muted-foreground font-mono-ref">{matter.lastActivity}</span>
+                        <span className="text-xs text-muted-foreground font-mono-ref">
+                          {matter.lastActivity}
+                        </span>
                       </td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -500,14 +444,22 @@ export default function CaseManagementContent() {
                             aria-label={`Exporter ${matter.reference}`}
                             title="Exporter"
                           >
-                            <Icon name="ArrowDownTrayIcon" size={14} className="text-muted-foreground" />
+                            <Icon
+                              name="ArrowDownTrayIcon"
+                              size={14}
+                              className="text-muted-foreground"
+                            />
                           </button>
                           <button
                             className="p-1.5 rounded hover:bg-red-50 transition-colors"
                             aria-label={`Archiver ${matter.reference}`}
                             title="Archiver le dossier"
                           >
-                            <Icon name="ArchiveBoxIcon" size={14} className="text-muted-foreground hover:text-red-500" />
+                            <Icon
+                              name="ArchiveBoxIcon"
+                              size={14}
+                              className="text-muted-foreground hover:text-red-500"
+                            />
                           </button>
                         </div>
                       </td>
@@ -522,19 +474,34 @@ export default function CaseManagementContent() {
           <div className="flex items-center justify-between px-4 py-3 border-t border-border">
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">Lignes par page :</span>
-              <select className="input-field w-auto text-xs py-1" aria-label="Nombre de lignes par page">
+              <select
+                className="input-field w-auto text-xs py-1"
+                aria-label="Nombre de lignes par page"
+              >
                 <option>10</option>
                 <option>25</option>
                 <option>50</option>
               </select>
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground mr-2">1 – {filtered.length} sur {filtered.length}</span>
-              <button className="btn-ghost p-1.5 disabled:opacity-40" disabled aria-label="Page précédente">
+              <span className="text-xs text-muted-foreground mr-2">
+                1 – {filtered.length} sur {filtered.length}
+              </span>
+              <button
+                className="btn-ghost p-1.5 disabled:opacity-40"
+                disabled
+                aria-label="Page précédente"
+              >
                 <Icon name="ChevronLeftIcon" size={16} />
               </button>
-              <button className="px-3 py-1 text-xs font-medium bg-primary text-white rounded-lg">1</button>
-              <button className="btn-ghost p-1.5 disabled:opacity-40" disabled aria-label="Page suivante">
+              <button className="px-3 py-1 text-xs font-medium bg-primary text-white rounded-lg">
+                1
+              </button>
+              <button
+                className="btn-ghost p-1.5 disabled:opacity-40"
+                disabled
+                aria-label="Page suivante"
+              >
                 <Icon name="ChevronRightIcon" size={16} />
               </button>
             </div>
@@ -544,10 +511,7 @@ export default function CaseManagementContent() {
         {/* Detail panel */}
         {selectedMatter && (
           <div className="w-full xl:w-[480px] flex-shrink-0">
-            <CaseDetailPanel
-              matter={selectedMatter}
-              onClose={() => setSelectedMatter(null)}
-            />
+            <CaseDetailPanel matter={selectedMatter} onClose={() => setSelectedMatter(null)} />
           </div>
         )}
       </div>
