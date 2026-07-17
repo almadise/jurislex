@@ -158,14 +158,189 @@ export default function DocumentGenerationContent() {
     }
   };
 
-  const handleExport = (format: 'docx' | 'pdf') => {
-    setIsExporting(format);
-    setTimeout(() => {
-      setIsExporting(null);
-      toast.success(`Document exporté en ${format.toUpperCase()} avec succès`, {
-        description: 'Le téléchargement va démarrer automatiquement.',
+  const handleExport = async (format: 'docx' | 'pdf') => {
+    if (!generatedDoc || !selectedTemplate) return;
+
+    // Block export if document has unresolved variables / missing fields
+    if (!generatedDoc.isComplete || generatedDoc.missingFields.length > 0) {
+      toast.error('Export bloqué : des variables ne sont pas résolues.', {
+        description: `Champs manquants : ${generatedDoc.missingFields.join(', ')}`,
       });
-    }, 1500);
+      return;
+    }
+
+    setIsExporting(format);
+
+    try {
+      if (format === 'docx') {
+        const res = await fetch('/api/export/docx', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            templateName: selectedTemplate.name,
+            documentContent: generatedDoc.documentContent,
+            citations: generatedDoc.citations,
+            warnings: generatedDoc.warnings,
+          }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: 'Erreur serveur' }));
+          throw new Error(err.error || 'Erreur lors de la génération DOCX');
+        }
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${selectedTemplate.name.replace(/[^a-zA-Z0-9]/g, '_')}_JurisLex.docx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        toast.success('Document DOCX exporté avec succès', {
+          description: 'Le téléchargement a démarré.',
+        });
+      } else {
+        // PDF: client-side via jsPDF
+        const { jsPDF } = await import('jspdf');
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 20;
+        const maxWidth = pageWidth - margin * 2;
+        let y = margin;
+
+        const addPageIfNeeded = (lineHeight: number) => {
+          if (y + lineHeight > doc.internal.pageSize.getHeight() - margin) {
+            doc.addPage();
+            y = margin;
+          }
+        };
+
+        // Header
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.setTextColor(30, 58, 95);
+        doc.text('JURISLEX', pageWidth / 2, y, { align: 'center' });
+        y += 7;
+
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(9);
+        doc.setTextColor(107, 114, 128);
+        doc.text('Document généré — Projet à valider', pageWidth / 2, y, { align: 'center' });
+        y += 12;
+
+        // Title
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(14);
+        doc.setTextColor(30, 58, 95);
+        doc.text(selectedTemplate.name.toUpperCase(), pageWidth / 2, y, { align: 'center' });
+        y += 12;
+
+        // Separator
+        doc.setDrawColor(229, 231, 235);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 8;
+
+        // Document content
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(17, 24, 39);
+
+        const lines = doc.splitTextToSize(generatedDoc.documentContent, maxWidth);
+        lines.forEach((line: string) => {
+          addPageIfNeeded(6);
+          doc.text(line, margin, y);
+          y += 5.5;
+        });
+
+        // Citations
+        if (generatedDoc.citations.length > 0) {
+          y += 8;
+          addPageIfNeeded(10);
+          doc.setDrawColor(30, 58, 95);
+          doc.line(margin, y, pageWidth - margin, y);
+          y += 6;
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.setTextColor(30, 58, 95);
+          doc.text('RÉFÉRENCES JURIDIQUES', margin, y);
+          y += 6;
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          generatedDoc.citations.forEach((c) => {
+            addPageIfNeeded(6);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(30, 58, 95);
+            doc.text(`${c.reference}`, margin, y);
+            const refWidth = doc.getTextWidth(`${c.reference}  `);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(55, 65, 81);
+            const usageLines = doc.splitTextToSize(`— ${c.usage}`, maxWidth - refWidth);
+            doc.text(usageLines[0] || '', margin + refWidth, y);
+            y += 5;
+          });
+        }
+
+        // Warnings
+        if (generatedDoc.warnings.length > 0) {
+          y += 8;
+          addPageIfNeeded(10);
+          doc.setDrawColor(180, 83, 9);
+          doc.line(margin, y, pageWidth - margin, y);
+          y += 6;
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.setTextColor(180, 83, 9);
+          doc.text('AVERTISSEMENTS', margin, y);
+          y += 6;
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          generatedDoc.warnings.forEach((w) => {
+            addPageIfNeeded(6);
+            const wLines = doc.splitTextToSize(`⚠ ${w.message}`, maxWidth);
+            wLines.forEach((wl: string) => {
+              addPageIfNeeded(5);
+              doc.text(wl, margin, y);
+              y += 5;
+            });
+          });
+        }
+
+        // Footer note
+        y += 10;
+        addPageIfNeeded(12);
+        doc.setDrawColor(229, 231, 235);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 5;
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8);
+        doc.setTextColor(156, 163, 175);
+        const footerText =
+          'Ce document a été généré automatiquement par JurisLex à partir du corpus juridique camerounais et OHADA. Il ne constitue pas un avis juridique.';
+        const footerLines = doc.splitTextToSize(footerText, maxWidth);
+        footerLines.forEach((fl: string) => {
+          doc.text(fl, margin, y);
+          y += 4.5;
+        });
+
+        const filename = `${selectedTemplate.name.replace(/[^a-zA-Z0-9]/g, '_')}_JurisLex.pdf`;
+        doc.save(filename);
+
+        toast.success('Document PDF exporté avec succès', {
+          description: 'Le téléchargement a démarré.',
+        });
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : `Erreur lors de l'export ${format.toUpperCase()}`;
+      toast.error(message);
+    } finally {
+      setIsExporting(null);
+    }
   };
 
   return (

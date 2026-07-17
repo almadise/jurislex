@@ -184,30 +184,53 @@ export default function DocumentPreview({ template, formData, generatedDoc, onBa
             Modifier
           </button>
           <div className="flex-1" />
-          <button
-            onClick={() => onExport('docx')}
-            disabled={isExporting !== null}
-            className="btn-secondary min-w-[140px] justify-center"
-          >
-            {isExporting === 'docx' ? (
-              <Icon name="ArrowPathIcon" size={16} className="animate-spin" />
-            ) : (
-              <Icon name="DocumentArrowDownIcon" size={16} />
-            )}
-            Export DOCX
-          </button>
-          <button
-            onClick={() => onExport('pdf')}
-            disabled={isExporting !== null}
-            className="btn-primary min-w-[140px] justify-center"
-          >
-            {isExporting === 'pdf' ? (
-              <Icon name="ArrowPathIcon" size={16} className="animate-spin" />
-            ) : (
-              <Icon name="DocumentArrowDownIcon" size={16} />
-            )}
-            Export PDF
-          </button>
+
+          {/* Block export if unresolved variables */}
+          {!generatedDoc.isComplete && generatedDoc.missingFields.length > 0 ? (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+                <Icon name="ExclamationCircleIcon" size={14} className="text-red-600 flex-shrink-0" />
+                <span className="text-xs font-medium text-red-700">
+                  Export bloqué — variables non résolues : {generatedDoc.missingFields.join(', ')}
+                </span>
+              </div>
+              <button disabled className="btn-secondary min-w-[140px] justify-center opacity-40 cursor-not-allowed">
+                <Icon name="DocumentArrowDownIcon" size={16} />
+                Export DOCX
+              </button>
+              <button disabled className="btn-primary min-w-[140px] justify-center opacity-40 cursor-not-allowed">
+                <Icon name="DocumentArrowDownIcon" size={16} />
+                Export PDF
+              </button>
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={() => onExport('docx')}
+                disabled={isExporting !== null}
+                className="btn-secondary min-w-[140px] justify-center"
+              >
+                {isExporting === 'docx' ? (
+                  <Icon name="ArrowPathIcon" size={16} className="animate-spin" />
+                ) : (
+                  <Icon name="DocumentArrowDownIcon" size={16} />
+                )}
+                {isExporting === 'docx' ? 'Génération...' : 'Export DOCX'}
+              </button>
+              <button
+                onClick={() => onExport('pdf')}
+                disabled={isExporting !== null}
+                className="btn-primary min-w-[140px] justify-center"
+              >
+                {isExporting === 'pdf' ? (
+                  <Icon name="ArrowPathIcon" size={16} className="animate-spin" />
+                ) : (
+                  <Icon name="DocumentArrowDownIcon" size={16} />
+                )}
+                {isExporting === 'pdf' ? 'Génération...' : 'Export PDF'}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
