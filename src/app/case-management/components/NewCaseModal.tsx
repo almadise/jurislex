@@ -4,6 +4,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import Icon from '@/components/ui/AppIcon';
 import type { Matter } from './CaseManagementContent';
+import { caseService } from '@/lib/services/caseService';
 
 interface NewCaseModalProps {
   onClose: () => void;
@@ -36,42 +37,70 @@ export default function NewCaseModal({ onClose, onCreated }: NewCaseModalProps) 
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<NewCaseForm>();
 
   const onSubmit = async (data: NewCaseForm) => {
-    await new Promise((r) => setTimeout(r, 600));
-    const refNum = String(Math.floor(Math.random() * 900) + 100);
-    const newMatter: Matter = {
-      id: `matter-${Date.now()}`,
-      reference: `DOS-2026-0${refNum}`,
-      title: data.title,
-      domain: data.domain,
-      parties: [data.party1, data.party2].filter(Boolean),
-      status: 'draft',
-      analyses: 0,
-      documents: 0,
-      lastActivity: '17/07/2026',
-      createdAt: '17/07/2026',
-      assignedTo: 'Fotso Mbarga',
-      riskLevel: data.riskLevel,
-      tags: data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
-    };
-    onCreated(newMatter);
+    try {
+      const parties = [data.party1, data.party2].filter(Boolean);
+      const tags = data.tags
+        ? data.tags
+            .split(',')
+            .map((t) => t.trim())
+            .filter(Boolean)
+        : [];
+
+      const newMatter = await caseService.create({
+        title: data.title,
+        domain: data.domain,
+        parties,
+        riskLevel: data.riskLevel,
+        tags,
+      });
+
+      if (newMatter) {
+        onCreated(newMatter);
+      } else {
+        setError('root', { message: 'Erreur lors de la création du dossier. Veuillez réessayer.' });
+      }
+    } catch (err: any) {
+      setError('root', {
+        message: err.message ?? 'Erreur inattendue. Veuillez réessayer.',
+      });
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="new-case-title">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="new-case-title"
+    >
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative bg-card rounded-xl border border-border shadow-modal w-full max-w-lg scale-in">
         <div className="flex items-center justify-between p-5 border-b border-border">
-          <h2 id="new-case-title" className="text-base font-semibold text-foreground">Nouveau dossier</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors" aria-label="Fermer">
+          <h2 id="new-case-title" className="text-base font-semibold text-foreground">
+            Nouveau dossier
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+            aria-label="Fermer"
+          >
             <Icon name="XMarkIcon" size={18} className="text-muted-foreground" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-5 flex flex-col gap-4">
+          {errors.root && (
+            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <Icon name="ExclamationTriangleIcon" size={16} className="text-red-500 flex-shrink-0" />
+              <p className="text-xs text-red-700">{errors.root.message}</p>
+            </div>
+          )}
+
           <div>
             <label className="label" htmlFor="new-case-title-input">
               Intitulé du dossier <span className="text-red-500">*</span>
@@ -80,9 +109,13 @@ export default function NewCaseModal({ onClose, onCreated }: NewCaseModalProps) 
               id="new-case-title-input"
               className={`input-field ${errors.title ? 'border-red-400' : ''}`}
               placeholder="Ex: Licenciement abusif — Nom du salarié c/ Employeur"
-              {...register('title', { required: 'L\'intitulé est obligatoire.' })}
+              {...register('title', { required: "L'intitulé est obligatoire." })}
             />
-            {errors.title && <p className="error-text" role="alert">{errors.title.message}</p>}
+            {errors.title && (
+              <p className="error-text" role="alert">
+                {errors.title.message}
+              </p>
+            )}
           </div>
 
           <div>
@@ -96,10 +129,16 @@ export default function NewCaseModal({ onClose, onCreated }: NewCaseModalProps) 
             >
               <option value="">Sélectionner un domaine...</option>
               {domainOptions.map((d) => (
-                <option key={`domain-select-${d}`} value={d}>{d}</option>
+                <option key={`domain-select-${d}`} value={d}>
+                  {d}
+                </option>
               ))}
             </select>
-            {errors.domain && <p className="error-text" role="alert">{errors.domain.message}</p>}
+            {errors.domain && (
+              <p className="error-text" role="alert">
+                {errors.domain.message}
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -113,7 +152,11 @@ export default function NewCaseModal({ onClose, onCreated }: NewCaseModalProps) 
                 placeholder="Nom de la partie 1"
                 {...register('party1', { required: 'Requis.' })}
               />
-              {errors.party1 && <p className="error-text" role="alert">{errors.party1.message}</p>}
+              {errors.party1 && (
+                <p className="error-text" role="alert">
+                  {errors.party1.message}
+                </p>
+              )}
             </div>
             <div>
               <label className="label" htmlFor="new-case-party2">
@@ -156,7 +199,11 @@ export default function NewCaseModal({ onClose, onCreated }: NewCaseModalProps) 
             <button type="button" onClick={onClose} className="btn-secondary flex-1 justify-center">
               Annuler
             </button>
-            <button type="submit" disabled={isSubmitting} className="btn-primary flex-1 justify-center">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="btn-primary flex-1 justify-center"
+            >
               {isSubmitting ? (
                 <>
                   <Icon name="ArrowPathIcon" size={16} className="animate-spin" />
