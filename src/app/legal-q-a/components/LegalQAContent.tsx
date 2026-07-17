@@ -1,10 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from '@/components/ui/AppIcon';
 import StatusBadge from '@/components/ui/StatusBadge';
 import QAResponseSection from './QAResponseSection';
 import CitationPanel from './CitationPanel';
+import { getChatCompletion } from '@/lib/ai/chatCompletion';
+import { QA_SYSTEM_PROMPT, QA_USER_PROMPT } from '@/lib/ai/legalPrompts';
+import { toast } from 'sonner';
 
 export interface QACitation {
   id: string;
@@ -30,109 +33,12 @@ export interface QAResponse {
   warningMessage: string;
   citations: QACitation[];
   missingTexts: string[];
+  abstractionMode?: boolean;
 }
 
-const mockResponse: QAResponse = {
-  question: "Quelles sont les obligations d'un employeur en cas de licenciement économique au Cameroun ?",
-  summary:
-    "En droit camerounais du travail, le licenciement économique est soumis à des conditions de forme et de fond strictes. L'employeur doit respecter une procédure préalable impliquant une consultation des représentants du personnel, une déclaration à l'Inspection du travail, et le versement d'une indemnité de licenciement calculée selon l'ancienneté du salarié.",
-  legalRule:
-    "Selon l'article 40 du Code du Travail (Loi n° 92-007), le licenciement pour motif économique est autorisé lorsque l'entreprise fait face à des difficultés économiques sérieuses ou à des mutations technologiques nécessitant une réduction des effectifs. La procédure impose une consultation préalable des délégués du personnel et une notification à l'Inspection du travail quinze (15) jours avant toute décision.",
-  application:
-    "L'indemnité de licenciement est due dès lors que le salarié justifie d'au moins deux (2) ans d'ancienneté. Son calcul est basé sur le salaire moyen des douze (12) derniers mois : 20% du salaire mensuel par année d'ancienneté pour les 10 premières années, puis 25% au-delà. Le non-respect de la procédure rend le licenciement abusif, exposant l'employeur à des dommages-intérêts.",
-  uncertainties: [
-    "Le seuil de salariés à partir duquel la procédure collective s'applique n'est pas clairement défini dans le texte consulté.",
-    "Les modalités de calcul de l'indemnité pour les contrats à durée déterminée non renouvelés pour motif économique restent ambiguës dans le corpus disponible.",
-  ],
-  conflicts: [
-    "Le Décret n° 93-572 (source secondaire) mentionne un délai de préavis de 30 jours, en contradiction avec les 15 jours indiqués par l'article 40 du Code du Travail. La source officielle prévaut.",
-  ],
-  riskLevel: 'medium',
-  warningMessage:
-    "Cette analyse est fondée sur les textes indexés au 17/07/2026. Elle ne constitue pas un avis juridique. Les situations individuelles de licenciement économique impliquent des enjeux significatifs — une consultation avec un avocat spécialisé en droit social est recommandée avant toute décision.",
-  citations: [
-    {
-      id: 'cit-001',
-      reference: 'LOI-92-007-1992',
-      article: 'Art. 40',
-      title: 'Code du Travail du Cameroun',
-      excerpt: "Le licenciement pour motif économique est autorisé lorsque l'entreprise fait face à des difficultés économiques sérieuses ou à des mutations technologiques...",
-      page: 28,
-      authority: 'République du Cameroun',
-      legalStatus: 'verified',
-      claimStatus: 'supported',
-      domain: 'Droit du travail',
-    },
-    {
-      id: 'cit-002',
-      reference: 'LOI-92-007-1992',
-      article: 'Art. 41',
-      title: 'Code du Travail du Cameroun',
-      excerpt: "L'indemnité de licenciement est due au travailleur licencié qui justifie d'une ancienneté d'au moins deux ans dans l'entreprise...",
-      page: 29,
-      authority: 'République du Cameroun',
-      legalStatus: 'verified',
-      claimStatus: 'supported',
-      domain: 'Droit du travail',
-    },
-    {
-      id: 'cit-003',
-      reference: 'LOI-92-007-1992',
-      article: 'Art. 42',
-      title: 'Code du Travail du Cameroun',
-      excerpt: "La procédure de licenciement collectif pour motif économique nécessite une consultation préalable des délégués du personnel...",
-      page: 30,
-      authority: 'République du Cameroun',
-      legalStatus: 'verified',
-      claimStatus: 'supported',
-      domain: 'Droit du travail',
-    },
-    {
-      id: 'cit-004',
-      reference: 'DECRET-93-572',
-      article: 'Art. 7',
-      title: 'Décret n° 93-572 portant application du Code du Travail',
-      excerpt: "La notification à l'Inspection du travail doit intervenir au moins trente jours avant la date prévue des licenciements...",
-      page: 4,
-      authority: 'République du Cameroun',
-      legalStatus: 'probable',
-      claimStatus: 'conflicting',
-      domain: 'Droit du travail',
-    },
-    {
-      id: 'cit-005',
-      reference: 'LOI-92-007-1992',
-      article: 'Art. 39',
-      title: 'Code du Travail du Cameroun',
-      excerpt: "Constitue un licenciement abusif, le licenciement effectué sans motif légitime ou sans respect de la procédure légale...",
-      page: 27,
-      authority: 'République du Cameroun',
-      legalStatus: 'verified',
-      claimStatus: 'inferred',
-      domain: 'Droit du travail',
-    },
-    {
-      id: 'cit-006',
-      reference: 'CC-CMR-1981',
-      article: 'Art. 1382',
-      title: 'Code Civil camerounais',
-      excerpt: "Tout fait quelconque de l'homme qui cause à autrui un dommage oblige celui par la faute duquel il est arrivé à le réparer...",
-      page: 389,
-      authority: 'République du Cameroun',
-      legalStatus: 'probable',
-      claimStatus: 'inferred',
-      domain: 'Droit civil',
-    },
-  ],
-  missingTexts: [
-    "Convention collective applicable au secteur d'activité (non indexée dans le corpus actuel)",
-    "Jurisprudence de la Cour d'Appel de Yaoundé sur les litiges de licenciement économique",
-  ],
-};
-
 const suggestedQuestions = [
+  "Quelles sont les obligations d\'un employeur en cas de licenciement économique au Cameroun ?",
   "Quel est le délai de prescription pour une action en paiement d\'indemnité de licenciement ?",
-  "Quelles sont les conditions de validité d\'un contrat de travail à durée déterminée en droit camerounais ?",
   "Comment calculer les intérêts de retard sur une créance commerciale selon l\'OHADA ?",
   "Quelles sont les formalités de création d'une SARL au Cameroun selon l'Acte uniforme ?",
 ];
@@ -140,19 +46,48 @@ const suggestedQuestions = [
 export default function LegalQAContent() {
   const [question, setQuestion] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [response, setResponse] = useState<QAResponse | null>(mockResponse);
+  const [response, setResponse] = useState<QAResponse | null>(null);
   const [selectedCitation, setSelectedCitation] = useState<QACitation | null>(null);
   const [showAllCitations, setShowAllCitations] = useState(false);
 
-  // Backend integration point: POST /api/qa with { question, domain_filter?, matter_id? }
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!question.trim()) return;
     setIsLoading(true);
     setResponse(null);
-    setTimeout(() => {
-      setResponse(mockResponse);
+    setSelectedCitation(null);
+
+    try {
+      const result = await getChatCompletion(
+        'OPEN_AI',
+        'gpt-4o',
+        [
+          { role: 'system', content: QA_SYSTEM_PROMPT },
+          { role: 'user', content: QA_USER_PROMPT(question) },
+        ],
+        {
+          max_completion_tokens: 3000,
+          temperature: 0.2,
+          response_format: { type: 'json_object' },
+        }
+      );
+
+      const content = result?.choices?.[0]?.message?.content;
+      if (!content) throw new Error('Réponse vide du modèle');
+
+      const parsed: QAResponse = JSON.parse(content);
+
+      // Abstention mode: insufficient sources
+      if (parsed.abstractionMode) {
+        toast.warning('Sources insuffisantes — réponse partielle fournie.');
+      }
+
+      setResponse(parsed);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erreur lors de la génération de la réponse';
+      toast.error(message);
+    } finally {
       setIsLoading(false);
-    }, 1200);
+    }
   };
 
   return (
@@ -204,7 +139,7 @@ export default function LegalQAContent() {
         </p>
 
         {/* Suggested questions */}
-        {!response && (
+        {!response && !isLoading && (
           <div className="mt-4 pt-4 border-t border-border">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Questions fréquentes</p>
             <div className="flex flex-wrap gap-2">
@@ -224,17 +159,22 @@ export default function LegalQAContent() {
 
       {/* Loading state */}
       {isLoading && (
-        <div className="card p-6 animate-pulse">
-          <div className="h-4 bg-muted rounded w-1/3 mb-4" />
-          <div className="space-y-2 mb-6">
+        <div className="card p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+              <Icon name="ArrowPathIcon" size={16} className="text-primary animate-spin" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Analyse juridique en cours…</p>
+              <p className="text-xs text-muted-foreground">Recherche dans le corpus camerounais et OHADA</p>
+            </div>
+          </div>
+          <div className="animate-pulse space-y-3">
             <div className="h-3 bg-muted rounded w-full" />
             <div className="h-3 bg-muted rounded w-5/6" />
             <div className="h-3 bg-muted rounded w-4/5" />
-          </div>
-          <div className="h-4 bg-muted rounded w-1/4 mb-3" />
-          <div className="space-y-2">
+            <div className="h-3 bg-muted rounded w-3/4 mt-4" />
             <div className="h-3 bg-muted rounded w-full" />
-            <div className="h-3 bg-muted rounded w-3/4" />
           </div>
         </div>
       )}
@@ -249,51 +189,41 @@ export default function LegalQAContent() {
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
                 <Icon name="QuestionMarkCircleIcon" size={16} className="text-white" />
               </div>
-              <p className="text-sm font-medium text-foreground leading-relaxed">
-                {response.question}
-              </p>
-            </div>
-
-            {/* Risk banner */}
-            <div className={`flex items-start gap-3 p-3 rounded-lg border ${
-              response.riskLevel === 'high' ? 'bg-red-50 border-red-200' :
-              response.riskLevel === 'medium'? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'
-            }`}>
-              <Icon
-                name={response.riskLevel === 'high' ? 'ExclamationCircleIcon' : response.riskLevel === 'medium' ? 'ExclamationTriangleIcon' : 'CheckCircleIcon'}
-                size={16}
-                className={`flex-shrink-0 mt-0.5 ${
-                  response.riskLevel === 'high' ? 'text-red-600' :
-                  response.riskLevel === 'medium'? 'text-amber-600' : 'text-green-600'
-                }`}
-              />
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <StatusBadge type="risk" value={response.riskLevel} size="sm" />
-                  <span className="text-xs font-medium text-foreground">Revue professionnelle recommandée</span>
-                </div>
-                <p className="text-xs text-muted-foreground">{response.warningMessage}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Question analysée</p>
+                <p className="text-sm text-foreground font-medium">{response.question}</p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <StatusBadge type="risk" value={response.riskLevel} size="sm" />
               </div>
             </div>
 
-            <QAResponseSection response={response} onCitationClick={setSelectedCitation} />
+            {/* Abstention mode warning */}
+            {response.abstractionMode && (
+              <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <Icon name="ExclamationTriangleIcon" size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-800 mb-1">Sources insuffisantes dans le corpus</p>
+                  <p className="text-xs text-amber-700">La réponse ci-dessous est partielle. Une consultation professionnelle est indispensable.</p>
+                </div>
+              </div>
+            )}
+
+            <QAResponseSection
+              response={response}
+              onCitationClick={(c) => setSelectedCitation(c)}
+            />
 
             {/* Conflicts */}
             {response.conflicts.length > 0 && (
-              <div className="card p-4">
+              <div className="card p-4 border-purple-200 bg-purple-50">
                 <div className="flex items-center gap-2 mb-3">
                   <Icon name="ExclamationCircleIcon" size={16} className="text-purple-600" />
-                  <h3 className="text-sm font-semibold text-foreground">Conflits détectés</h3>
-                  <span className="ml-auto claim-badge-conflicting text-[11px] px-2 py-0.5 rounded-full font-medium">
-                    {response.conflicts.length} conflit{response.conflicts.length > 1 ? 's' : ''}
-                  </span>
+                  <span className="text-sm font-semibold text-purple-800">Conflits entre sources détectés</span>
                 </div>
                 <div className="space-y-2">
                   {response.conflicts.map((conflict, i) => (
-                    <div key={`conflict-${i}`} className="flex items-start gap-2 p-3 bg-purple-50 rounded-lg">
-                      <Icon name="ArrowsRightLeftIcon" size={14} className="text-purple-600 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-purple-800">{conflict}</p>
-                    </div>
+                    <p key={`conflict-${i}`} className="text-xs text-purple-700 leading-relaxed">{conflict}</p>
                   ))}
                 </div>
               </div>
@@ -301,51 +231,43 @@ export default function LegalQAContent() {
 
             {/* Missing texts */}
             {response.missingTexts.length > 0 && (
-              <div className="card p-4">
+              <div className="card p-4 border-gray-200 bg-gray-50">
                 <div className="flex items-center gap-2 mb-3">
-                  <Icon name="DocumentMinusIcon" size={16} className="text-amber-600" />
-                  <h3 className="text-sm font-semibold text-foreground">Textes manquants dans le corpus</h3>
+                  <Icon name="DocumentMinusIcon" size={16} className="text-gray-500" />
+                  <span className="text-sm font-semibold text-gray-700">Textes non disponibles dans le corpus</span>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {response.missingTexts.map((text, i) => (
-                    <div key={`missing-${i}`} className="flex items-center gap-2 p-2 bg-amber-50 rounded">
-                      <Icon name="MinusCircleIcon" size={12} className="text-amber-500 flex-shrink-0" />
-                      <p className="text-xs text-amber-700">{text}</p>
-                    </div>
+                    <p key={`missing-${i}`} className="text-xs text-gray-600">• {text}</p>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Actions */}
-            <div className="flex items-center gap-3 flex-wrap">
-              <button className="btn-primary">
-                <Icon name="DocumentTextIcon" size={16} />
-                Générer un document
-              </button>
-              <button className="btn-secondary">
-                <Icon name="FolderPlusIcon" size={16} />
-                Ajouter au dossier
-              </button>
-              <button className="btn-secondary">
-                <Icon name="ArrowDownTrayIcon" size={16} />
-                Exporter la réponse
-              </button>
-              <button className="btn-ghost text-muted-foreground">
-                <Icon name="FlagIcon" size={16} />
-                Signaler une erreur
-              </button>
+            {/* Warning */}
+            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <Icon name="ShieldExclamationIcon" size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-800 leading-relaxed">{response.warningMessage}</p>
             </div>
+
+            {/* New question button */}
+            <button
+              onClick={() => { setResponse(null); setQuestion(''); }}
+              className="btn-secondary self-start"
+            >
+              <Icon name="PlusIcon" size={16} />
+              Nouvelle question
+            </button>
           </div>
 
           {/* Citation panel */}
-          <div className="w-80 xl:w-96 flex-shrink-0">
+          <div className="w-80 flex-shrink-0">
             <CitationPanel
               citations={response.citations}
               selectedCitation={selectedCitation}
               onSelect={setSelectedCitation}
               showAll={showAllCitations}
-              onToggleShowAll={() => setShowAllCitations(!showAllCitations)}
+              onToggleShowAll={() => setShowAllCitations((v) => !v)}
             />
           </div>
         </div>

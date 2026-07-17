@@ -6,6 +6,8 @@ import { toast } from 'sonner';
 import TemplateSelector from './TemplateSelector';
 import DocumentForm from './DocumentForm';
 import DocumentPreview from './DocumentPreview';
+import { getChatCompletion } from '@/lib/ai/chatCompletion';
+import { DOC_GEN_SYSTEM_PROMPT, DOC_GEN_USER_PROMPT } from '@/lib/ai/legalPrompts';
 
 export type DocumentTemplate = {
   id: string;
@@ -67,7 +69,7 @@ export const templates: DocumentTemplate[] = [
   {
     id: 'tpl-requete-saisine',
     name: 'Requête / Projet de saisine',
-    description: 'Projet de requête introductive d\'instance ou de saisine d\'une juridiction. Revue professionnelle obligatoire avant dépôt.',
+    description: "Projet de requête introductive d'instance ou de saisine d'une juridiction. Revue professionnelle obligatoire avant dépôt.",
     icon: 'ScaleIcon',
     domain: 'Procédure civile / OHADA',
     requiredFields: ['demandeur', 'defendeur', 'juridiction', 'objet', 'faits', 'moyens_droit', 'pretentions'],
@@ -77,6 +79,14 @@ export const templates: DocumentTemplate[] = [
   },
 ];
 
+export interface GeneratedDocumentData {
+  documentContent: string;
+  citations: { reference: string; usage: string }[];
+  warnings: { type: 'missing' | 'review' | 'legal' | 'info'; message: string }[];
+  missingFields: string[];
+  isComplete: boolean;
+}
+
 type Step = 'select' | 'form' | 'preview';
 
 export default function DocumentGenerationContent() {
@@ -85,6 +95,7 @@ export default function DocumentGenerationContent() {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExporting, setIsExporting] = useState<'docx' | 'pdf' | null>(null);
+  const [generatedDoc, setGeneratedDoc] = useState<GeneratedDocumentData | null>(null);
 
   const stepConfig = {
     select: { label: 'Choisir un modèle', number: 1 },
@@ -96,20 +107,57 @@ export default function DocumentGenerationContent() {
 
   const handleSelectTemplate = (tpl: DocumentTemplate) => {
     setSelectedTemplate(tpl);
+    setGeneratedDoc(null);
     setStep('form');
   };
 
-  // Backend integration point: POST /api/documents/generate with { template_id, form_data }
-  const handleGeneratePreview = (data: Record<string, string>) => {
+  const handleGeneratePreview = async (data: Record<string, string>) => {
+    if (!selectedTemplate) return;
     setFormData(data);
     setIsGenerating(true);
-    setTimeout(() => {
-      setIsGenerating(false);
+
+    try {
+      const result = await getChatCompletion(
+        'OPEN_AI',
+        'gpt-4o',
+        [
+          { role: 'system', content: DOC_GEN_SYSTEM_PROMPT },
+          {
+            role: 'user',
+            content: DOC_GEN_USER_PROMPT(
+              selectedTemplate.name,
+              selectedTemplate.description,
+              selectedTemplate.legalBasis,
+              data
+            ),
+          },
+        ],
+        {
+          max_completion_tokens: 3000,
+          temperature: 0.3,
+          response_format: { type: 'json_object' },
+        }
+      );
+
+      const content = result?.choices?.[0]?.message?.content;
+      if (!content) throw new Error('Réponse vide du modèle');
+
+      const parsed: GeneratedDocumentData = JSON.parse(content);
+
+      if (!parsed.isComplete && parsed.missingFields.length > 0) {
+        toast.error(`Champs manquants : ${parsed.missingFields.join(', ')}`);
+      }
+
+      setGeneratedDoc(parsed);
       setStep('preview');
-    }, 1000);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erreur lors de la génération du document';
+      toast.error(message);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
-  // Backend integration point: POST /api/documents/export with { document_id, format: 'docx' | 'pdf' }
   const handleExport = (format: 'docx' | 'pdf') => {
     setIsExporting(format);
     setTimeout(() => {
@@ -140,7 +188,7 @@ export default function DocumentGenerationContent() {
               <React.Fragment key={`step-${s}`}>
                 <div className="flex items-center gap-3">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
-                    isCompleted ? 'bg-green-500 text-white' : isCurrent ?'bg-primary text-white': 'bg-muted text-muted-foreground'
+                    isCompleted ? 'bg-green-500 text-white' : isCurrent ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
                   }`}>
                     {isCompleted ? <Icon name="CheckIcon" size={16} /> : stepConfig[s].number}
                   </div>
@@ -171,10 +219,11 @@ export default function DocumentGenerationContent() {
         />
       )}
 
-      {step === 'preview' && selectedTemplate && (
+      {step === 'preview' && selectedTemplate && generatedDoc && (
         <DocumentPreview
           template={selectedTemplate}
           formData={formData}
+          generatedDoc={generatedDoc}
           onBack={() => setStep('form')}
           onExport={handleExport}
           isExporting={isExporting}

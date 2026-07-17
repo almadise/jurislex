@@ -2,9 +2,16 @@
 
 import React, { useState } from 'react';
 import Icon from '@/components/ui/AppIcon';
-
 import ClarificationWizard from './ClarificationWizard';
 import AnalysisOutput from './AnalysisOutput';
+import { getChatCompletion } from '@/lib/ai/chatCompletion';
+import {
+  ANALYSIS_EXTRACT_SYSTEM_PROMPT,
+  ANALYSIS_EXTRACT_USER_PROMPT,
+  ANALYSIS_FULL_SYSTEM_PROMPT,
+  ANALYSIS_FULL_USER_PROMPT,
+} from '@/lib/ai/legalPrompts';
+import { toast } from 'sonner';
 
 export type AnalysisStep = 'input' | 'clarification' | 'result';
 
@@ -34,140 +41,88 @@ export interface StructuredAnalysis {
   confidenceLevel: number;
 }
 
-const mockAnalysis: StructuredAnalysis = {
-  factObject: {
-    parties: [
-      { name: 'Mme Nkeng Abanda', quality: 'Salariée / Demanderesse potentielle' },
-      { name: 'SARL Fotso & Associés', quality: 'Employeur / Défendeur potentiel' },
-    ],
-    jurisdiction: 'Tribunal de Grande Instance de Douala — Chambre sociale',
-    dates: [
-      { label: 'Date d\'embauche', date: '03/01/2019' },
-      { label: 'Date de notification de licenciement', date: '28/05/2026' },
-      { label: 'Fin du préavis (estimée)', date: '12/07/2026' },
-    ],
-    legalRelation: 'Contrat de travail à durée indéterminée — Droit du travail camerounais',
-    admittedFacts: [
-      'Contrat de travail à durée indéterminée depuis le 03/01/2019',
-      'Notification de licenciement reçue le 28/05/2026',
-      'Ancienneté de 7 ans et 5 mois à la date de licenciement',
-      'Salaire mensuel brut de 450 000 FCFA',
-    ],
-    disputedFacts: [
-      'Nature exacte du motif invoqué (économique vs personnel)',
-      'Consultation préalable des délégués du personnel (non confirmée)',
-      'Notification à l\'Inspection du travail (non vérifiée)',
-    ],
-    amounts: [
-      { label: 'Salaire mensuel brut', amount: '450 000 FCFA' },
-      { label: 'Indemnité de licenciement estimée', amount: '630 000 FCFA' },
-      { label: 'Préavis (3 mois estimé)', amount: '1 350 000 FCFA' },
-    ],
-    objective: 'Contester le licenciement et obtenir paiement des indemnités dues',
-    legalIssues: [
-      'Le licenciement respecte-t-il la procédure légale camerounaise ?',
-      'L\'indemnité de licenciement est-elle correctement calculée ?',
-      'Y a-t-il lieu à licenciement abusif ?',
-      'Quel est le délai de prescription de l\'action ?',
-    ],
-    missingInfo: [
-      'Copie du contrat de travail signé',
-      'Lettre de licenciement (motif exact)',
-      'Preuve de consultation des délégués du personnel',
-      'Bulletins de salaire des 12 derniers mois',
-    ],
-    urgencies: [
-      'Délai de prescription de l\'action prud\'homale : 2 ans à compter de la notification — échéance au 28/05/2028',
-      'Vérifier si le préavis a été effectué ou payé en lieu et place',
-    ],
-    confidenceLevel: 72,
-  },
-  applicableLaw: [
-    { reference: 'LOI-92-007-1992', article: 'Art. 39', relevance: 'Définition du licenciement abusif' },
-    { reference: 'LOI-92-007-1992', article: 'Art. 40', relevance: 'Conditions du licenciement économique' },
-    { reference: 'LOI-92-007-1992', article: 'Art. 41', relevance: 'Calcul de l\'indemnité de licenciement' },
-    { reference: 'LOI-92-007-1992', article: 'Art. 42', relevance: 'Procédure de licenciement collectif' },
-    { reference: 'LOI-92-007-1992', article: 'Art. 70', relevance: 'Délai de prescription des actions' },
-    { reference: 'CC-CMR-1981', article: 'Art. 1382', relevance: 'Responsabilité délictuelle (dommages-intérêts)' },
-  ],
-  qualification: 'Licenciement potentiellement abusif pour non-respect de la procédure légale (absence de consultation des délégués du personnel et de notification à l\'Inspection du travail). Sous réserve de confirmation des faits disputés, Mme Nkeng Abanda dispose d\'une action en licenciement abusif avec demande d\'indemnisation complémentaire.',
-  risks: [
-    { level: 'high', description: 'Absence de preuve de consultation des délégués du personnel — élément constitutif du licenciement abusif' },
-    { level: 'medium', description: 'Motif de licenciement non clairement établi — peut affecter la qualification juridique' },
-    { level: 'low', description: 'Délai de prescription confortable (2 ans) — aucune urgence procédurale immédiate' },
-  ],
-  evidence: [
-    { item: 'Lettre de licenciement', status: 'to_gather' },
-    { item: 'Contrat de travail signé', status: 'to_gather' },
-    { item: 'Bulletins de salaire (12 mois)', status: 'to_gather' },
-    { item: 'Procès-verbal de consultation des délégués', status: 'missing' },
-    { item: 'Accusé de réception de la notification à l\'Inspection', status: 'missing' },
-    { item: 'Attestation de travail', status: 'available' },
-  ],
-  nextSteps: [
-    { priority: 1, action: 'Rassembler la lettre de licenciement et le contrat de travail', deadline: '31/07/2026' },
-    { priority: 2, action: 'Vérifier auprès de l\'Inspection du travail si la notification a été reçue', deadline: '07/08/2026' },
-    { priority: 3, action: 'Calculer précisément les indemnités dues sur base des bulletins de salaire', deadline: '15/08/2026' },
-    { priority: 4, action: 'Envoyer une mise en demeure à l\'employeur pour paiement des indemnités', deadline: '22/08/2026' },
-    { priority: 5, action: 'Saisir le Tribunal de Grande Instance de Douala si absence de réponse', deadline: '28/08/2026' },
-  ],
-  overallRisk: 'medium',
-  confidenceLevel: 72,
-};
-
-const clarificationQuestions = [
-  {
-    id: 'q-001',
-    question: "Avez-vous reçu une lettre de licenciement précisant le motif exact ? Si oui, quel motif est mentionné (économique, faute, autre) ?",
-    impact: 'Qualification juridique du licenciement et procédure applicable',
-    required: true,
-  },
-  {
-    id: 'q-002',
-    question: "Y a-t-il des délégués du personnel dans l'entreprise, et avez-vous connaissance d'une réunion de consultation avant votre licenciement ?",
-    impact: 'Validité de la procédure — élément constitutif du licenciement abusif',
-    required: true,
-  },
-  {
-    id: 'q-003',
-    question: "Quel est votre salaire mensuel brut moyen sur les 12 derniers mois ? Avez-vous vos bulletins de salaire ?",
-    impact: 'Calcul précis de l\'indemnité de licenciement et du préavis',
-    required: true,
-  },
-  {
-    id: 'q-004',
-    question: "Avez-vous effectué votre préavis ou a-t-il été payé en lieu et place ? Êtes-vous toujours dans la période de préavis ?",
-    impact: 'Urgence procédurale et montant des indemnités',
-    required: false,
-  },
-];
+interface ClarificationQuestion {
+  id: string;
+  question: string;
+  impact: string;
+  required: boolean;
+}
 
 export default function LegalAnalysisContent() {
   const [step, setStep] = useState<AnalysisStep>('input');
   const [factNarrative, setFactNarrative] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [clarificationQuestions, setClarificationQuestions] = useState<ClarificationQuestion[]>([]);
+  const [extractedFactObject, setExtractedFactObject] = useState<FactObject | null>(null);
   const [analysis, setAnalysis] = useState<StructuredAnalysis | null>(null);
 
-  // Backend integration point: POST /api/analysis/extract-facts with { narrative }
-  const handleNarrativeSubmit = () => {
+  // Step 1: Extract facts + generate clarification questions via LLM
+  const handleNarrativeSubmit = async () => {
     if (!factNarrative.trim()) return;
     setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
+
+    try {
+      const result = await getChatCompletion(
+        'OPEN_AI',
+        'gpt-4o',
+        [
+          { role: 'system', content: ANALYSIS_EXTRACT_SYSTEM_PROMPT },
+          { role: 'user', content: ANALYSIS_EXTRACT_USER_PROMPT(factNarrative) },
+        ],
+        {
+          max_completion_tokens: 2000,
+          temperature: 0.2,
+          response_format: { type: 'json_object' },
+        }
+      );
+
+      const content = result?.choices?.[0]?.message?.content;
+      if (!content) throw new Error('Réponse vide du modèle');
+
+      const parsed = JSON.parse(content);
+      setExtractedFactObject(parsed.factObject);
+      setClarificationQuestions(parsed.clarificationQuestions || []);
       setStep('clarification');
-    }, 900);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erreur lors de l'extraction des faits";
+      toast.error(message);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  // Backend integration point: POST /api/analysis/analyze with { fact_object, answers }
-  const handleClarificationComplete = (finalAnswers: Record<string, string>) => {
-    setAnswers(finalAnswers);
+  // Step 2: Full analysis with clarification answers via LLM
+  const handleClarificationComplete = async (answers: Record<string, string>) => {
+    if (!extractedFactObject) return;
     setIsProcessing(true);
-    setTimeout(() => {
-      setAnalysis(mockAnalysis);
-      setIsProcessing(false);
+
+    try {
+      const result = await getChatCompletion(
+        'OPEN_AI',
+        'gpt-4o',
+        [
+          { role: 'system', content: ANALYSIS_FULL_SYSTEM_PROMPT },
+          { role: 'user', content: ANALYSIS_FULL_USER_PROMPT(extractedFactObject, answers) },
+        ],
+        {
+          max_completion_tokens: 3000,
+          temperature: 0.2,
+          response_format: { type: 'json_object' },
+        }
+      );
+
+      const content = result?.choices?.[0]?.message?.content;
+      if (!content) throw new Error('Réponse vide du modèle');
+
+      const parsed: StructuredAnalysis = JSON.parse(content);
+      setAnalysis(parsed);
       setStep('result');
-    }, 1200);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erreur lors de l'analyse juridique";
+      toast.error(message);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const stepLabels: Record<AnalysisStep, string> = {
@@ -198,7 +153,7 @@ export default function LegalAnalysisContent() {
               <React.Fragment key={`analysis-step-${s}`}>
                 <div className="flex items-center gap-2">
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${
-                    isCompleted ? 'bg-green-500 text-white' : isCurrent ?'bg-primary text-white': 'bg-muted text-muted-foreground'
+                    isCompleted ? 'bg-green-500 text-white' : isCurrent ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
                   }`}>
                     {isCompleted ? <Icon name="CheckIcon" size={14} /> : i + 1}
                   </div>
@@ -245,7 +200,7 @@ export default function LegalAnalysisContent() {
                 {isProcessing ? (
                   <>
                     <Icon name="ArrowPathIcon" size={16} className="animate-spin" />
-                    Extraction des faits...
+                    Extraction des faits…
                   </>
                 ) : (
                   <>

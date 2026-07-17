@@ -3,54 +3,28 @@
 import React, { useState } from 'react';
 import Icon from '@/components/ui/AppIcon';
 import StatusBadge from '@/components/ui/StatusBadge';
-import type { DocumentTemplate } from './DocumentGenerationContent';
+import type { DocumentTemplate, GeneratedDocumentData } from './DocumentGenerationContent';
 
 interface DocumentPreviewProps {
   template: DocumentTemplate;
   formData: Record<string, string>;
+  generatedDoc: GeneratedDocumentData;
   onBack: () => void;
   onExport: (format: 'docx' | 'pdf') => void;
   isExporting: 'docx' | 'pdf' | null;
 }
 
-interface WarningItem {
-  id: string;
-  type: 'missing' | 'review' | 'legal' | 'info';
-  message: string;
-}
-
-export default function DocumentPreview({ template, formData, onBack, onExport, isExporting }: DocumentPreviewProps) {
+export default function DocumentPreview({ template, formData, generatedDoc, onBack, onExport, isExporting }: DocumentPreviewProps) {
   const [activeTab, setActiveTab] = useState<'preview' | 'warnings' | 'citations'>('preview');
 
-  const warnings: WarningItem[] = [
+  // Merge LLM warnings with template-level review requirement
+  const allWarnings = [
     ...(template.humanReviewLevel === 'required'
       ? [{ id: 'warn-review-req', type: 'review' as const, message: 'Ce document requiert une validation par un avocat avant tout dépôt officiel.' }]
       : template.humanReviewLevel === 'recommended'
       ? [{ id: 'warn-review-rec', type: 'review' as const, message: 'Une revue par un professionnel du droit est recommandée avant envoi.' }]
       : []),
-    {
-      id: 'warn-dates',
-      type: 'legal',
-      message: 'Les délais indiqués sont calculés à partir de la date de signature. Vérifiez les jours fériés et la règle de computation des délais applicable.',
-    },
-    {
-      id: 'warn-montant',
-      type: 'info',
-      message: 'Les intérêts de retard éventuels ne sont pas inclus dans ce document. Consultez l\'article applicable pour le taux légal.',
-    },
-  ];
-
-  const citations = [
-    ...template.legalBasis.map((basis, i) => ({
-      id: `cite-basis-${i}`,
-      reference: basis,
-      usage: 'Fondement principal du document',
-    })),
-    {
-      id: 'cite-extra-1',
-      reference: 'Art. 1134 Code Civil',
-      usage: 'Force obligatoire des conventions',
-    },
+    ...generatedDoc.warnings.map((w, i) => ({ id: `warn-llm-${i}`, ...w })),
   ];
 
   const warningTypeConfig = {
@@ -60,35 +34,19 @@ export default function DocumentPreview({ template, formData, onBack, onExport, 
     info: { icon: 'InformationCircleIcon', className: 'bg-gray-50 border-gray-200 text-gray-600', iconClass: 'text-gray-400' },
   };
 
-  const today = '17/07/2026';
-
-  const previewText = `
-À l'attention de ${formData.destinataire || '[Destinataire]'},
-
-Objet : ${formData.objet || '[Objet]'}
-
-Monsieur / Madame,
-
-Par la présente, ${formData.expediteur || '[Expéditeur]'} a l'honneur de vous notifier ce qui suit :
-
-${formData.objet_reclamation || `En application des dispositions de l'article 40 et suivants du Code du Travail camerounais (Loi n° 92-007 du 14 août 1992), ainsi que des stipulations contractuelles liant les parties, il vous est demandé de procéder au règlement de la somme de ${formData.montant || '[Montant]'} FCFA dans un délai de ${formData.delai || '[Délai]'} jours à compter de la réception des présentes.`}
-
-À défaut de règlement dans le délai imparti, ${formData.expediteur || '[Expéditeur]'} se réserve le droit d'engager toutes poursuites judiciaires utiles pour obtenir paiement de sa créance, en ce compris les intérêts de retard et les frais de procédure.
-
-Fondement juridique : ${formData.fondement_juridique || template.legalBasis.join(', ')}.
-
-Veuillez agréer, Monsieur / Madame, l'expression de mes salutations distinguées.
-
-Fait à Yaoundé, le ${today}
-
-${formData.expediteur || '[Expéditeur]'}
-  `.trim();
-
   const tabs = [
     { id: 'preview', label: 'Aperçu du document' },
-    { id: 'warnings', label: `Avertissements (${warnings.length})` },
-    { id: 'citations', label: `Citations (${citations.length})` },
+    { id: 'warnings', label: `Avertissements (${allWarnings.length})` },
+    { id: 'citations', label: `Citations (${generatedDoc.citations.length})` },
   ] as const;
+
+  const fieldLabels: Record<string, string> = {
+    expediteur: 'Expéditeur', destinataire: 'Destinataire', objet: 'Objet',
+    montant: 'Montant', delai: 'Délai', fondement_juridique: 'Fondement',
+    salarie: 'Salarié', employeur: 'Employeur', demande: 'Demande',
+    requerant: 'Requérant', autorite: 'Autorité', objet_recours: 'Objet recours',
+    demandeur: 'Demandeur', defendeur: 'Défendeur', juridiction: 'Juridiction',
+  };
 
   return (
     <div className="flex gap-6">
@@ -102,7 +60,7 @@ ${formData.expediteur || '[Expéditeur]'}
               onClick={() => setActiveTab(t.id)}
               className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
                 activeTab === t.id
-                  ? 'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
+                  ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               {t.label}
@@ -117,47 +75,63 @@ ${formData.expediteur || '[Expéditeur]'}
               <div className="text-center mb-8">
                 <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">DOCUMENT GÉNÉRÉ — PROJET À VALIDER</p>
                 <h2 className="text-lg font-semibold text-foreground">{template.name.toUpperCase()}</h2>
-                <p className="text-sm text-muted-foreground mt-1">Yaoundé, le {today}</p>
               </div>
+
+              {/* Missing fields warning */}
+              {!generatedDoc.isComplete && generatedDoc.missingFields.length > 0 && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icon name="ExclamationCircleIcon" size={16} className="text-red-600" />
+                    <p className="text-sm font-semibold text-red-700">Champs manquants détectés</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {generatedDoc.missingFields.map((f, i) => (
+                      <span key={`mf-${i}`} className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded font-mono">{f}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Document body */}
               <div className="max-w-2xl mx-auto">
                 <div className="bg-white border border-border rounded-lg p-8 shadow-sm">
                   <pre className="text-sm text-foreground leading-relaxed whitespace-pre-wrap font-sans">
-                    {previewText}
+                    {generatedDoc.documentContent}
                   </pre>
                 </div>
 
                 {/* Legal citations footer */}
-                <div className="mt-6 p-4 bg-muted/50 rounded-lg border border-border">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                    Références juridiques utilisées
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {citations.map((c) => (
-                      <span
-                        key={c.id}
-                        className="font-mono-ref text-xs px-2 py-1 bg-primary/10 text-primary rounded"
-                      >
-                        {c.reference}
-                      </span>
-                    ))}
+                {generatedDoc.citations.length > 0 && (
+                  <div className="mt-6 p-4 bg-muted/50 rounded-lg border border-border">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                      Références juridiques utilisées
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {generatedDoc.citations.map((c, i) => (
+                        <span
+                          key={`cite-${i}`}
+                          className="font-mono-ref text-xs px-2 py-1 bg-primary/10 text-primary rounded"
+                        >
+                          {c.reference}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}
 
           {activeTab === 'warnings' && (
             <div className="fade-in space-y-3 max-w-2xl mx-auto">
-              {warnings.length === 0 ? (
+              {allWarnings.length === 0 ? (
                 <div className="flex flex-col items-center py-12 text-center">
                   <Icon name="CheckCircleIcon" size={40} className="text-green-500 mb-3" />
                   <p className="text-base font-semibold text-foreground">Aucun avertissement</p>
                   <p className="text-sm text-muted-foreground">Le document est prêt à l'export.</p>
                 </div>
               ) : (
-                warnings.map((warning) => {
+                allWarnings.map((warning) => {
                   const config = warningTypeConfig[warning.type];
                   return (
                     <div
@@ -179,8 +153,8 @@ ${formData.expediteur || '[Expéditeur]'}
 
           {activeTab === 'citations' && (
             <div className="fade-in space-y-3 max-w-2xl mx-auto">
-              {citations.map((c) => (
-                <div key={c.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border">
+              {generatedDoc.citations.map((c, i) => (
+                <div key={`cit-${i}`} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border">
                   <Icon name="BookOpenIcon" size={16} className="text-primary flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="font-mono-ref text-sm font-medium text-primary">{c.reference}</p>
@@ -189,14 +163,16 @@ ${formData.expediteur || '[Expéditeur]'}
                   <StatusBadge type="claim" value="supported" size="sm" />
                 </div>
               ))}
-              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Icon name="ShieldCheckIcon" size={14} className="text-green-600" />
-                  <p className="text-xs font-medium text-green-700">
-                    Toutes les citations ont été vérifiées contre des identifiants internes existants.
-                  </p>
+              {generatedDoc.citations.length > 0 && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Icon name="ShieldCheckIcon" size={14} className="text-green-600" />
+                    <p className="text-xs font-medium text-green-700">
+                      Citations générées à partir du corpus juridique camerounais et OHADA.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>
@@ -241,18 +217,13 @@ ${formData.expediteur || '[Expéditeur]'}
           <h3 className="text-sm font-semibold text-foreground mb-3">Récapitulatif</h3>
           <div className="space-y-2">
             {Object.entries(formData).map(([key, value]) => {
-              const config = { label: key };
-              const fieldLabel = (
-                {
-                  expediteur: 'Expéditeur', destinataire: 'Destinataire', objet: 'Objet',
-                  montant: 'Montant', delai: 'Délai', fondement_juridique: 'Fondement',
-                  salarie: 'Salarié', employeur: 'Employeur', demande: 'Demande',
-                }[key] || key
-              );
+              if (!value) return null;
               return (
                 <div key={`recap-${key}`}>
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{fieldLabel}</p>
-                  <p className="text-xs text-foreground truncate">{value || '—'}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {fieldLabels[key] || key}
+                  </p>
+                  <p className="text-xs text-foreground line-clamp-2">{value}</p>
                 </div>
               );
             })}
@@ -260,31 +231,37 @@ ${formData.expediteur || '[Expéditeur]'}
         </div>
 
         <div className="card p-4">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Statut du document</h3>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Icon name="CheckCircleIcon" size={14} className="text-green-500" />
-              <span className="text-xs text-foreground">Aucune variable non résolue</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Icon name="CheckCircleIcon" size={14} className="text-green-500" />
-              <span className="text-xs text-foreground">Citations vérifiées</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {template.humanReviewLevel === 'required' ? (
-                <Icon name="ExclamationCircleIcon" size={14} className="text-red-500" />
-              ) : template.humanReviewLevel === 'recommended' ? (
-                <Icon name="ExclamationTriangleIcon" size={14} className="text-amber-500" />
-              ) : (
-                <Icon name="CheckCircleIcon" size={14} className="text-green-500" />
-              )}
-              <span className="text-xs text-foreground">
-                {template.humanReviewLevel === 'required' ?'Revue obligatoire avant dépôt'
-                  : template.humanReviewLevel === 'recommended' ?'Revue recommandée' :'Prêt à l\'envoi'}
-              </span>
-            </div>
+          <h3 className="text-sm font-semibold text-foreground mb-2">Statut du document</h3>
+          <div className="flex items-center gap-2">
+            {generatedDoc.isComplete ? (
+              <>
+                <Icon name="CheckCircleIcon" size={16} className="text-green-600" />
+                <span className="text-xs font-medium text-green-700">Complet — prêt à l'export</span>
+              </>
+            ) : (
+              <>
+                <Icon name="ExclamationCircleIcon" size={16} className="text-amber-600" />
+                <span className="text-xs font-medium text-amber-700">Incomplet — champs manquants</span>
+              </>
+            )}
           </div>
         </div>
+
+        {template.humanReviewLevel !== 'none' && (
+          <div className={`card p-4 ${template.humanReviewLevel === 'required' ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50'}`}>
+            <div className="flex items-start gap-2">
+              <Icon name="ShieldExclamationIcon" size={16} className={`flex-shrink-0 mt-0.5 ${template.humanReviewLevel === 'required' ? 'text-red-600' : 'text-amber-600'}`} />
+              <div>
+                <p className={`text-xs font-semibold mb-1 ${template.humanReviewLevel === 'required' ? 'text-red-700' : 'text-amber-700'}`}>
+                  {template.humanReviewLevel === 'required' ? 'Revue professionnelle obligatoire' : 'Revue professionnelle recommandée'}
+                </p>
+                <p className={`text-xs leading-relaxed ${template.humanReviewLevel === 'required' ? 'text-red-600' : 'text-amber-600'}`}>
+                  {template.humanReviewLevel === 'required' ?'Ce document ne peut pas être déposé sans validation préalable par un avocat.' :'Une vérification par un professionnel du droit est conseillée avant envoi.'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
