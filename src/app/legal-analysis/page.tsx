@@ -6,7 +6,7 @@ export default function LegalAnalysisPage() {
   return (
     <AppLayout
       breadcrumbs={[
-        { label: 'JurisLex' },
+        { label: 'juriLex' },
         { label: 'Analyse de situation' },
       ]}
     >

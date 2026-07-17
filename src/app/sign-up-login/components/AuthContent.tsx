@@ -30,7 +30,7 @@ const demoCredentials = [
   {
     role: 'Utilisateur standard',
     email: 'fotso.mbarga@juriscm.cm',
-    password: 'JurisLex2026!',
+    password: 'juriLex2026!',
     description: 'Recherche, Q&A, génération documentaire, dossiers',
   },
   {
@@ -82,7 +82,7 @@ export default function AuthContent() {
     }
 
     setIsLoading(false);
-    toast.success(`Connexion réussie — Bienvenue sur JurisLex`, {
+    toast.success(`Connexion réussie — Bienvenue sur juriLex`, {
       description: `Rôle : ${valid.role}`,
     });
     router.push('/');
@@ -124,7 +124,7 @@ export default function AuthContent() {
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-12">
             <AppLogo size={40} />
-            <span className="text-white text-2xl font-semibold tracking-tight">JurisLex</span>
+            <span className="text-white text-2xl font-semibold tracking-tight">juriLex</span>
           </div>
 
           <div className="mb-10">
@@ -166,7 +166,7 @@ export default function AuthContent() {
             </p>
           </div>
           <p className="text-white/30 text-xs mt-4">
-            JurisLex MVP v1.0 — Corpus Cameroun & OHADA — Juillet 2026
+            juriLex MVP v1.0 — Corpus Cameroun & OHADA — Juillet 2026
           </p>
         </div>
       </div>
@@ -177,7 +177,7 @@ export default function AuthContent() {
           {/* Mobile logo */}
           <div className="flex items-center gap-2 mb-8 lg:hidden">
             <AppLogo size={32} />
-            <span className="text-foreground text-xl font-semibold">JurisLex</span>
+            <span className="text-foreground text-xl font-semibold">juriLex</span>
           </div>
 
           {/* Tab switcher */}
@@ -204,7 +204,7 @@ export default function AuthContent() {
           {tab === 'login' && (
             <div className="fade-in">
               <div className="mb-6">
-                <h2 className="text-xl font-semibold text-foreground mb-1">Connexion à JurisLex</h2>
+                <h2 className="text-xl font-semibold text-foreground mb-1">Connexion à juriLex</h2>
                 <p className="text-sm text-muted-foreground">Accédez à votre espace juridique sécurisé.</p>
               </div>
 
@@ -339,7 +339,7 @@ export default function AuthContent() {
           {tab === 'signup' && (
             <div className="fade-in">
               <div className="mb-6">
-                <h2 className="text-xl font-semibold text-foreground mb-1">Créer votre compte JurisLex</h2>
+                <h2 className="text-xl font-semibold text-foreground mb-1">Créer votre compte juriLex</h2>
                 <p className="text-sm text-muted-foreground">Accès sécurisé aux textes juridiques camerounais et OHADA.</p>
               </div>
 
@@ -491,7 +491,7 @@ export default function AuthContent() {
                     <span className="text-primary hover:underline cursor-pointer">conditions d'utilisation</span>
                     {' '}et la{' '}
                     <span className="text-primary hover:underline cursor-pointer">politique de confidentialité</span>.
-                    Je comprends que JurisLex fournit une assistance juridique documentaire, non une garantie de résultat.
+                    Je comprends que juriLex fournit une assistance juridique documentaire, non une garantie de résultat.
                   </p>
                 </div>
                 {signupForm.formState.errors.acceptTerms && (

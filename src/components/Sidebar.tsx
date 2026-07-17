@@ -79,7 +79,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         <AppLogo size={32} className="flex-shrink-0" />
         {!collapsed && (
           <span className="font-semibold text-white text-base tracking-tight whitespace-nowrap overflow-hidden">
-            JurisLex
+            juriLex
           </span>
         )}
       </div>

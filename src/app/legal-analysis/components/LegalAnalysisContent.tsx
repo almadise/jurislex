@@ -289,7 +289,7 @@ export default function LegalAnalysisContent() {
             moduleLabel="Analyse de situation"
             explanation={abstentionData.reason}
             missingElements={abstentionData.missingTexts}
-            referralMessage="Pour cette situation, nous vous recommandons de consulter un avocat inscrit au Barreau du Cameroun. JurisLex ne peut pas produire une analyse fiable sans les textes de référence nécessaires."
+            referralMessage="Pour cette situation, nous vous recommandons de consulter un avocat inscrit au Barreau du Cameroun. juriLex ne peut pas produire une analyse fiable sans les textes de référence nécessaires."
             onReset={handleReset}
             resetLabel="Analyser une nouvelle situation"
           />

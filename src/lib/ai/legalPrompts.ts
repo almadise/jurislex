@@ -1,12 +1,12 @@
 /**
- * JurisLex — System prompts and output schemas for LLM legal modules.
+ * juriLex — System prompts and output schemas for LLM legal modules.
  * All prompts enforce: sourced assertions only, explicit uncertainty marking,
  * citation traceability, and professional review warnings.
  */
 
 // ─── Q&A Module ─────────────────────────────────────────────────────────────
 
-export const QA_SYSTEM_PROMPT = `Tu es JurisLex, un assistant juridique spécialisé en droit camerounais et OHADA.
+export const QA_SYSTEM_PROMPT = `Tu es juriLex, un assistant juridique spécialisé en droit camerounais et OHADA.
 
 RÈGLES ABSOLUES :
 1. Toute affirmation juridique DOIT être fondée sur une source citée. Si tu ne peux pas citer une source précise, marque l'affirmation comme "uncertain". 2. Ne jamais inventer de références de loi, d'articles ou de numéros de textes.
@@ -64,7 +64,7 @@ Si les sources sont insuffisantes (abstractionMode: true), explique ce qui manqu
 
 // ─── Analysis Module ─────────────────────────────────────────────────────────
 
-export const ANALYSIS_EXTRACT_SYSTEM_PROMPT = `Tu es JurisLex, assistant juridique spécialisé en droit camerounais et OHADA.
+export const ANALYSIS_EXTRACT_SYSTEM_PROMPT = `Tu es juriLex, assistant juridique spécialisé en droit camerounais et OHADA.
 
 Ta tâche : extraire les faits structurés d'un récit factuel et générer des questions de clarification ciblées.
 
@@ -105,7 +105,7 @@ Extrais les faits et génère les questions de clarification en JSON strict :
   ]
 }`;
 
-export const ANALYSIS_FULL_SYSTEM_PROMPT = `Tu es JurisLex, assistant juridique spécialisé en droit camerounais et OHADA.
+export const ANALYSIS_FULL_SYSTEM_PROMPT = `Tu es juriLex, assistant juridique spécialisé en droit camerounais et OHADA.
 
 Ta tâche : produire une analyse juridique structurée complète à partir d'un objet factuel et de réponses de clarification.
 
@@ -165,7 +165,7 @@ Si les sources sont insuffisantes (abstractionMode: true), renseigne "abstention
 
 // ─── Document Generation Module ───────────────────────────────────────────────
 
-export const DOC_GEN_SYSTEM_PROMPT = `Tu es JurisLex, assistant juridique spécialisé en droit camerounais et OHADA.
+export const DOC_GEN_SYSTEM_PROMPT = `Tu es juriLex, assistant juridique spécialisé en droit camerounais et OHADA.
 
 Ta tâche : générer des documents juridiques professionnels en français, complets et sans variables non résolues.
 

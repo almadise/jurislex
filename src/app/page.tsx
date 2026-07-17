@@ -6,7 +6,7 @@ export default function LegalSearchPage() {
   return (
     <AppLayout
       breadcrumbs={[
-        { label: 'JurisLex' },
+        { label: 'juriLex' },
         { label: 'Recherche juridique' },
       ]}
     >

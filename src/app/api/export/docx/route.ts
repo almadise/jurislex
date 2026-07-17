@@ -77,9 +77,9 @@ export async function POST(req: NextRequest) {
     }
 
     const doc = new Document({
-      creator: 'JurisLex',
+      creator: 'juriLex',
       title: templateName,
-      description: `Document généré par JurisLex — ${templateName}`,
+      description: `Document généré par juriLex — ${templateName}`,
       sections: [
         {
           properties: {
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
             // Header
             new Paragraph({
               children: [
-                new TextRun({ text: 'JURISLEX', bold: true, size: 28, color: '1E3A5F' }),
+                new TextRun({ text: 'JURILEX', bold: true, size: 28, color: '1E3A5F' }),
               ],
               alignment: AlignmentType.CENTER,
               spacing: { after: 80 },
@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
             new Paragraph({
               children: [
                 new TextRun({
-                  text: 'Ce document a été généré automatiquement par JurisLex à partir du corpus juridique camerounais et OHADA. Il ne constitue pas un avis juridique et doit être validé par un professionnel du droit avant tout usage officiel.',
+                  text: 'Ce document a été généré automatiquement par juriLex à partir du corpus juridique camerounais et OHADA. Il ne constitue pas un avis juridique et doit être validé par un professionnel du droit avant tout usage officiel.',
                   size: 16,
                   color: '9CA3AF',
                   italics: true,
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
 
     const buffer = await Packer.toBuffer(doc);
 
-    const filename = `${templateName.replace(/[^a-zA-Z0-9]/g, '_')}_JurisLex.docx`;
+    const filename = `${templateName.replace(/[^a-zA-Z0-9]/g, '_')}_juriLex.docx`;
 
     return new NextResponse(buffer, {
       status: 200,

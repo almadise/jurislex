@@ -210,7 +210,7 @@ export default function DocumentGenerationContent() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${selectedTemplate.name.replace(/[^a-zA-Z0-9]/g, '_')}_JurisLex.docx`;
+        a.download = `${selectedTemplate.name.replace(/[^a-zA-Z0-9]/g, '_')}_juriLex.docx`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -240,7 +240,7 @@ export default function DocumentGenerationContent() {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(18);
         doc.setTextColor(30, 58, 95);
-        doc.text('JURISLEX', pageWidth / 2, y, { align: 'center' });
+        doc.text('JURILEX', pageWidth / 2, y, { align: 'center' });
         y += 7;
 
         doc.setFont('helvetica', 'italic');
@@ -338,14 +338,14 @@ export default function DocumentGenerationContent() {
         doc.setFontSize(8);
         doc.setTextColor(156, 163, 175);
         const footerText =
-          'Ce document a été généré automatiquement par JurisLex à partir du corpus juridique camerounais et OHADA. Il ne constitue pas un avis juridique.';
+          'Ce document a été généré automatiquement par juriLex à partir du corpus juridique camerounais et OHADA. Il ne constitue pas un avis juridique.';
         const footerLines = doc.splitTextToSize(footerText, maxWidth);
         footerLines.forEach((fl: string) => {
           doc.text(fl, margin, y);
           y += 4.5;
         });
 
-        const filename = `${selectedTemplate.name.replace(/[^a-zA-Z0-9]/g, '_')}_JurisLex.pdf`;
+        const filename = `${selectedTemplate.name.replace(/[^a-zA-Z0-9]/g, '_')}_juriLex.pdf`;
         doc.save(filename);
 
         toast.success('Document PDF exporté avec succès', {

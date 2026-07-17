@@ -24,7 +24,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'JurisLex — Recherche juridique OHADA & Cameroun',
+  title: 'juriLex — Recherche juridique OHADA & Cameroun',
   description: 'Plateforme de recherche juridique sourcée couvrant le droit camerounais et OHADA — citations vérifiées, analyse de situations et génération documentaire.',
   icons: {
     icon: [{ url: '/favicon.ico', type: 'image/x-icon' }],

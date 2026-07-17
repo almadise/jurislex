@@ -1,5 +1,5 @@
 -- ============================================================
--- JurisLex — Legal Search Module
+-- juriLex — Legal Search Module
 -- Tables: legal_provisions
 -- Features: pgvector embeddings, full-text search, hybrid search
 -- ============================================================

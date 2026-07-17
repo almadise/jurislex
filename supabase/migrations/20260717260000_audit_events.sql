@@ -1,5 +1,5 @@
 -- ============================================================
--- JurisLex — Audit Events Module
+-- juriLex — Audit Events Module
 -- Table: audit_events (journal d'audit par dossier)
 -- ============================================================
 
@@ -74,11 +74,11 @@ BEGIN
         IF existing_case_id IS NOT NULL THEN
           INSERT INTO public.audit_events (case_id, lawyer_id, action, entity_type, label, details, user_name, user_email)
           VALUES
-            (existing_case_id, existing_user_id, 'create', 'case', 'Dossier créé', jsonb_build_object('reference', 'DOS-2025-0001'), 'Avocat Demo', 'demo@jurislex.cm'),
-            (existing_case_id, existing_user_id, 'update', 'case', 'Statut modifié : brouillon → actif', jsonb_build_object('old_status', 'draft', 'new_status', 'active'), 'Avocat Demo', 'demo@jurislex.cm'),
-            (existing_case_id, existing_user_id, 'analysis', 'case_analysis', 'Analyse juridique générée', jsonb_build_object('confidence', 87), 'Avocat Demo', 'demo@jurislex.cm'),
-            (existing_case_id, existing_user_id, 'document', 'case_document', 'Document généré : Mise en demeure', jsonb_build_object('doc_type', 'docx'), 'Avocat Demo', 'demo@jurislex.cm'),
-            (existing_case_id, existing_user_id, 'view', 'case', 'Dossier consulté', jsonb_build_object(), 'Avocat Demo', 'demo@jurislex.cm')
+            (existing_case_id, existing_user_id, 'create', 'case', 'Dossier créé', jsonb_build_object('reference', 'DOS-2025-0001'), 'Avocat Demo', 'demo@jurilex.cm'),
+            (existing_case_id, existing_user_id, 'update', 'case', 'Statut modifié : brouillon → actif', jsonb_build_object('old_status', 'draft', 'new_status', 'active'), 'Avocat Demo', 'demo@jurilex.cm'),
+            (existing_case_id, existing_user_id, 'analysis', 'case_analysis', 'Analyse juridique générée', jsonb_build_object('confidence', 87), 'Avocat Demo', 'demo@jurilex.cm'),
+            (existing_case_id, existing_user_id, 'document', 'case_document', 'Document généré : Mise en demeure', jsonb_build_object('doc_type', 'docx'), 'Avocat Demo', 'demo@jurilex.cm'),
+            (existing_case_id, existing_user_id, 'view', 'case', 'Dossier consulté', jsonb_build_object(), 'Avocat Demo', 'demo@jurilex.cm')
           ON CONFLICT (id) DO NOTHING;
         END IF;
       END IF;

@@ -95,7 +95,7 @@ export default function TemplateSelector({ templates, onSelect }: TemplateSelect
         <div>
           <p className="text-xs font-semibold text-blue-700 mb-1">À propos de la génération documentaire</p>
           <p className="text-xs text-blue-600 leading-relaxed">
-            Les documents générés constituent des projets à vérifier. JurisLex garantit l'absence de variables non résolues dans l'export.
+            Les documents générés constituent des projets à vérifier. juriLex garantit l'absence de variables non résolues dans l'export.
             Les modèles marqués « revue professionnelle obligatoire » ne doivent pas être déposés sans validation par un avocat.
           </p>
         </div>

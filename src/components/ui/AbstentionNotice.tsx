@@ -18,10 +18,10 @@ export interface AbstentionNoticeProps {
 }
 
 /**
- * AbstentionNotice — displayed when JurisLex cannot provide a reliable answer
+ * AbstentionNotice — displayed when juriLex cannot provide a reliable answer
  * because the available legal corpus is insufficient for the question asked.
  *
- * Implements the "Mode Abstention" defined in Prompt_Codex_JurisLex_MVP:
+ * Implements the "Mode Abstention" defined in Prompt_Codex_juriLex_MVP:
  *  1. Explain what is missing
  *  2. Abstain from answering
  *  3. Propose a referral to a professional
@@ -94,7 +94,7 @@ export default function AbstentionNotice({
           </p>
           <p className="text-xs text-blue-700 leading-relaxed">
             {referralMessage ||
-              'Pour cette question, nous vous recommandons de consulter un avocat inscrit au Barreau du Cameroun ou un juriste spécialisé. JurisLex ne peut pas fournir de réponse fiable sans les textes de référence nécessaires.'}
+              'Pour cette question, nous vous recommandons de consulter un avocat inscrit au Barreau du Cameroun ou un juriste spécialisé. juriLex ne peut pas fournir de réponse fiable sans les textes de référence nécessaires.'}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <a
@@ -123,7 +123,7 @@ export default function AbstentionNotice({
       <div className="flex items-start gap-3 p-3 bg-muted/50 border border-border rounded-lg">
         <Icon name="ShieldExclamationIcon" size={14} className="text-muted-foreground flex-shrink-0 mt-0.5" />
         <p className="text-[11px] text-muted-foreground leading-relaxed">
-          JurisLex s'abstient de répondre lorsque les sources disponibles dans le corpus indexé sont insuffisantes pour garantir une réponse fiable. Cette décision vise à éviter toute information juridique erronée ou incomplète.
+          juriLex s'abstient de répondre lorsque les sources disponibles dans le corpus indexé sont insuffisantes pour garantir une réponse fiable. Cette décision vise à éviter toute information juridique erronée ou incomplète.
         </p>
       </div>
 

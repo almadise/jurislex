@@ -1,5 +1,5 @@
 -- ============================================================
--- Pipeline d'ingestion admin — JurisLex MVP
+-- Pipeline d'ingestion admin — juriLex MVP
 -- ============================================================
 
 -- 1. TYPES

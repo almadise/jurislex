@@ -6,7 +6,7 @@ export default function LegalQAPage() {
   return (
     <AppLayout
       breadcrumbs={[
-        { label: 'JurisLex' },
+        { label: 'juriLex' },
         { label: 'Questions & Réponses juridiques' },
       ]}
     >

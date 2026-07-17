@@ -6,7 +6,7 @@ export default function CaseManagementPage() {
   return (
     <AppLayout
       breadcrumbs={[
-        { label: 'JurisLex' },
+        { label: 'juriLex' },
         { label: 'Gestion des dossiers' },
       ]}
     >

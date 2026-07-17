@@ -6,7 +6,7 @@ export default function DocumentGenerationPage() {
   return (
     <AppLayout
       breadcrumbs={[
-        { label: 'JurisLex' },
+        { label: 'juriLex' },
         { label: 'Génération documentaire' },
       ]}
     >

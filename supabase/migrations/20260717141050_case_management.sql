@@ -1,5 +1,5 @@
 -- ============================================================
--- JurisLex — Case Management Module
+-- juriLex — Case Management Module
 -- Tables: user_profiles, cases, case_analyses, case_documents
 -- ============================================================
 
@@ -352,7 +352,7 @@ BEGIN
     phone_change_token, phone_change_sent_at
   ) VALUES (
     lawyer_uuid, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-    'fotso.mbarga@juriscm.cm', crypt('JurisLex2026!', gen_salt('bf', 10)), now(), now(), now(),
+    'fotso.mbarga@juriscm.cm', crypt('juriLex2026!', gen_salt('bf', 10)), now(), now(), now(),
     jsonb_build_object('full_name', 'Fotso Mbarga', 'role', 'lawyer'),
     jsonb_build_object('provider', 'email', 'providers', ARRAY['email']::TEXT[]),
     false, false, '', null, '', null, '', '', null, '', 0, '', null, null, '', '', null
