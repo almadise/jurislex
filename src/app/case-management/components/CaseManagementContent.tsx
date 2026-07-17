@@ -7,6 +7,7 @@ import CaseDetailPanel from './CaseDetailPanel';
 import NewCaseModal from './NewCaseModal';
 import { caseService } from '@/lib/services/caseService';
 import { toast } from 'sonner';
+import DeleteCaseModal from './DeleteCaseModal';
 
 export interface Matter {
   id: string;
@@ -46,6 +47,7 @@ export default function CaseManagementContent() {
   const [showNewCaseModal, setShowNewCaseModal] = useState(false);
   const [sortField, setSortField] = useState<keyof Matter>('lastActivity');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [deletingMatter, setDeletingMatter] = useState<Matter | null>(null);
 
   const fetchMatters = useCallback(async () => {
     setLoading(true);
@@ -126,6 +128,14 @@ export default function CaseManagementContent() {
     } catch {
       toast.error('Erreur lors de l\'archivage des dossiers.');
     }
+  };
+
+  const handleDeleteCase = async (matter: Matter) => {
+    await caseService.deleteCase(matter.id);
+    setMatters((prev) => prev.filter((m) => m.id !== matter.id));
+    if (selectedMatter?.id === matter.id) setSelectedMatter(null);
+    setDeletingMatter(null);
+    toast.success(`Dossier ${matter.reference} supprimé définitivement`);
   };
 
   const statusOptions = [
@@ -451,7 +461,7 @@ export default function CaseManagementContent() {
                             />
                           </button>
                           <button
-                            className="p-1.5 rounded hover:bg-red-50 transition-colors"
+                            className="p-1.5 rounded hover:bg-muted transition-colors"
                             aria-label={`Archiver ${matter.reference}`}
                             title="Archiver le dossier"
                           >
@@ -459,6 +469,18 @@ export default function CaseManagementContent() {
                               name="ArchiveBoxIcon"
                               size={14}
                               className="text-muted-foreground hover:text-red-500"
+                            />
+                          </button>
+                          <button
+                            onClick={() => setDeletingMatter(matter)}
+                            className="p-1.5 rounded hover:bg-red-50 transition-colors"
+                            aria-label={`Supprimer ${matter.reference}`}
+                            title="Supprimer le dossier"
+                          >
+                            <Icon
+                              name="TrashIcon"
+                              size={14}
+                              className="text-muted-foreground hover:text-red-600"
                             />
                           </button>
                         </div>
@@ -524,6 +546,14 @@ export default function CaseManagementContent() {
             setShowNewCaseModal(false);
             toast.success('Dossier créé avec succès', { description: newMatter.reference });
           }}
+        />
+      )}
+
+      {deletingMatter && (
+        <DeleteCaseModal
+          matter={deletingMatter}
+          onClose={() => setDeletingMatter(null)}
+          onConfirm={() => handleDeleteCase(deletingMatter)}
         />
       )}
     </div>

@@ -316,4 +316,111 @@ export const caseService = {
       return [];
     }
   },
+
+  /** Fetch audit log for a case */
+  async getAuditLog(caseId: string) {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    try {
+      const { data, error } = await supabase
+        .from('audit_events')
+        .select('*')
+        .eq('case_id', caseId)
+        .eq('lawyer_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        if (isSchemaError(error)) throw error;
+        return [];
+      }
+      return (data ?? []).map((row) => ({
+        id: row.id,
+        action: row.action as string,
+        entityType: row.entity_type ?? 'case',
+        label: row.label,
+        details: (row.details as Record<string, any>) ?? {},
+        userName: row.user_name ?? '',
+        userEmail: row.user_email ?? '',
+        createdAt: new Date(row.created_at).toLocaleDateString('fr-FR'),
+        createdTime: new Date(row.created_at).toLocaleTimeString('fr-FR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      }));
+    } catch {
+      return [];
+    }
+  },
+
+  /** Log an audit event for a case */
+  async logAuditEvent(params: {
+    caseId: string;
+    action: string;
+    entityType?: string;
+    entityId?: string;
+    label: string;
+    details?: Record<string, any>;
+  }): Promise<void> {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    try {
+      await supabase.from('audit_events').insert({
+        case_id: params.caseId,
+        lawyer_id: user.id,
+        action: params.action,
+        entity_type: params.entityType ?? 'case',
+        entity_id: params.entityId ?? null,
+        label: params.label,
+        details: params.details ?? {},
+        user_name: user.user_metadata?.full_name ?? '',
+        user_email: user.email ?? '',
+      });
+    } catch {
+      // Non-blocking: audit failures should not break the main flow
+    }
+  },
+
+  /** Delete a case and all its related data */
+  async deleteCase(caseId: string): Promise<void> {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // Log the deletion before deleting (cascade will remove audit_events too)
+    try {
+      await supabase.from('audit_events').insert({
+        case_id: caseId,
+        lawyer_id: user.id,
+        action: 'delete',
+        entity_type: 'case',
+        label: 'Dossier supprimé définitivement',
+        details: { deleted_by: user.email ?? '' },
+        user_name: user.user_metadata?.full_name ?? '',
+        user_email: user.email ?? '',
+      });
+    } catch {
+      // Non-blocking
+    }
+
+    const { error } = await supabase
+      .from('cases')
+      .delete()
+      .eq('id', caseId)
+      .eq('lawyer_id', user.id);
+
+    if (error) {
+      if (isSchemaError(error)) throw error;
+      throw new Error(error.message);
+    }
+  },
 };
