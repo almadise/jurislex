@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import AppLogo from '@/components/ui/AppLogo';
 import Icon from '@/components/ui/AppIcon';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface NavItem {
   label: string;
@@ -12,6 +13,7 @@ interface NavItem {
   icon: string;
   badge?: number;
   group?: string;
+  roles?: string[];
 }
 
 const navItems: NavItem[] = [
@@ -20,6 +22,7 @@ const navItems: NavItem[] = [
   { label: 'Analyse de situation', href: '/legal-analysis', icon: 'DocumentMagnifyingGlassIcon', group: 'Analyse' },
   { label: 'Génération documentaire', href: '/document-generation', icon: 'DocumentTextIcon', group: 'Analyse' },
   { label: 'Gestion des dossiers', href: '/case-management', icon: 'FolderOpenIcon', badge: 3, group: 'Dossiers' },
+  { label: 'Interface Réviseur', href: '/revision', icon: 'ClipboardDocumentCheckIcon', group: 'Révision', roles: ['reviseur', 'reviewer', 'admin'] },
 ];
 
 const bottomItems: NavItem[] = [
@@ -34,8 +37,35 @@ interface SidebarProps {
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const { user, getUserProfile } = useAuth();
+  const [userProfile, setUserProfile] = useState<{ full_name?: string; role?: string } | null>(null);
 
-  const groups = Array.from(new Set(navItems.map((i) => i.group)));
+  useEffect(() => {
+    if (user) {
+      getUserProfile()
+        .then((p: any) => setUserProfile(p))
+        .catch(() => setUserProfile(null));
+    } else {
+      setUserProfile(null);
+    }
+  }, [user, getUserProfile]);
+
+  const userRole = userProfile?.role ?? null;
+
+  const visibleNavItems = navItems.filter((item) => {
+    if (!item.roles) return true;
+    return userRole && item.roles.includes(userRole);
+  });
+
+  const groups = Array.from(new Set(visibleNavItems.map((i) => i.group)));
+
+  const initials = userProfile?.full_name
+    ? userProfile.full_name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
+    : user?.email?.[0]?.toUpperCase() ?? '?';
+
+  const roleLabel =
+    userRole === 'reviseur' || userRole === 'reviewer' ? 'Juriste Réviseur'
+    : userRole === 'admin'? 'Administrateur' :'Juriste — Standard';
 
   return (
     <aside
@@ -61,7 +91,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 {group}
               </p>
             )}
-            {navItems
+            {visibleNavItems
               .filter((i) => i.group === group)
               .map((item) => {
                 const isActive =
@@ -138,12 +168,14 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {/* User */}
         <div className={`flex items-center gap-3 px-3 py-2.5 mt-1 rounded-lg bg-white/5 ${collapsed ? 'justify-center' : ''}`}>
           <div className="w-7 h-7 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-xs font-bold">FM</span>
+            <span className="text-white text-xs font-bold">{initials}</span>
           </div>
           {!collapsed && (
             <div className="overflow-hidden">
-              <p className="text-white text-xs font-semibold truncate">Fotso Mbarga</p>
-              <p className="text-white/40 text-[10px] truncate">Juriste — Standard</p>
+              <p className="text-white text-xs font-semibold truncate">
+                {userProfile?.full_name ?? user?.email ?? 'Utilisateur'}
+              </p>
+              <p className="text-white/40 text-[10px] truncate">{roleLabel}</p>
             </div>
           )}
         </div>
