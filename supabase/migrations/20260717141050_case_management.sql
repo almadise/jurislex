@@ -3,18 +3,23 @@
 -- Tables: user_profiles, cases, case_analyses, case_documents
 -- ============================================================
 
--- 1. TYPES
-DROP TYPE IF EXISTS public.matter_status CASCADE;
-CREATE TYPE public.matter_status AS ENUM ('draft', 'active', 'analysis', 'documented', 'closed', 'archived');
+-- 1. TYPES (safe idempotent creation — no CASCADE drops)
 
-DROP TYPE IF EXISTS public.risk_level CASCADE;
-CREATE TYPE public.risk_level AS ENUM ('low', 'medium', 'high');
+DO $$ BEGIN
+  CREATE TYPE public.matter_status AS ENUM ('draft', 'active', 'analysis', 'documented', 'closed', 'archived');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS public.evidence_status CASCADE;
-CREATE TYPE public.evidence_status AS ENUM ('available', 'to_gather', 'missing');
+DO $$ BEGIN
+  CREATE TYPE public.risk_level AS ENUM ('low', 'medium', 'high');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS public.timeline_event_type CASCADE;
-CREATE TYPE public.timeline_event_type AS ENUM ('analysis', 'document', 'search', 'qa', 'create', 'update', 'note');
+DO $$ BEGIN
+  CREATE TYPE public.evidence_status AS ENUM ('available', 'to_gather', 'missing');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE public.timeline_event_type AS ENUM ('analysis', 'document', 'search', 'qa', 'create', 'update', 'note');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- 2. CORE TABLES
 
@@ -48,6 +53,10 @@ CREATE TABLE IF NOT EXISTS public.cases (
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Restore matter_status column if it was dropped by a previous CASCADE
+ALTER TABLE public.cases
+  ADD COLUMN IF NOT EXISTS matter_status public.matter_status NOT NULL DEFAULT 'draft';
 
 -- Case analyses
 CREATE TABLE IF NOT EXISTS public.case_analyses (
