@@ -23,6 +23,7 @@ const navItems: NavItem[] = [
   { label: 'Génération documentaire', href: '/document-generation', icon: 'DocumentTextIcon', group: 'Analyse' },
   { label: 'Gestion des dossiers', href: '/case-management', icon: 'FolderOpenIcon', badge: 3, group: 'Dossiers' },
   { label: 'Interface Réviseur', href: '/revision', icon: 'ClipboardDocumentCheckIcon', group: 'Révision', roles: ['reviseur', 'reviewer', 'admin'] },
+  { label: 'Observatoire MAJ', href: '/observatoire', icon: 'BellAlertIcon', group: 'Révision', roles: ['reviseur', 'reviewer', 'admin'] },
 ];
 
 const bottomItems: NavItem[] = [
