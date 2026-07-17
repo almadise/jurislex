@@ -5,6 +5,7 @@ import Icon from '@/components/ui/AppIcon';
 import StatusBadge from '@/components/ui/StatusBadge';
 import QAResponseSection from './QAResponseSection';
 import CitationPanel from './CitationPanel';
+import AbstentionNotice from '@/components/ui/AbstentionNotice';
 import { getChatCompletion } from '@/lib/ai/chatCompletion';
 import { QA_SYSTEM_PROMPT, QA_USER_PROMPT } from '@/lib/ai/legalPrompts';
 import { toast } from 'sonner';
@@ -75,12 +76,6 @@ export default function LegalQAContent() {
       if (!content) throw new Error('Réponse vide du modèle');
 
       const parsed: QAResponse = JSON.parse(content);
-
-      // Abstention mode: insufficient sources
-      if (parsed.abstractionMode) {
-        toast.warning('Sources insuffisantes — réponse partielle fournie.');
-      }
-
       setResponse(parsed);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erreur lors de la génération de la réponse';
@@ -198,78 +193,83 @@ export default function LegalQAContent() {
               </div>
             </div>
 
-            {/* Abstention mode warning */}
-            {response.abstractionMode && (
-              <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <Icon name="ExclamationTriangleIcon" size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-amber-800 mb-1">Sources insuffisantes dans le corpus</p>
-                  <p className="text-xs text-amber-700">La réponse ci-dessous est partielle. Une consultation professionnelle est indispensable.</p>
+            {/* Abstention mode — full panel replaces normal response */}
+            {response.abstractionMode ? (
+              <AbstentionNotice
+                moduleLabel="Q&A Juridique"
+                explanation={response.summary}
+                missingElements={response.missingTexts}
+                referralMessage={response.warningMessage}
+                onReset={() => { setResponse(null); setQuestion(''); }}
+                resetLabel="Poser une nouvelle question"
+              />
+            ) : (
+              <>
+                <QAResponseSection
+                  response={response}
+                  onCitationClick={(c) => setSelectedCitation(c)}
+                />
+
+                {/* Conflicts */}
+                {response.conflicts.length > 0 && (
+                  <div className="card p-4 border-purple-200 bg-purple-50">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Icon name="ExclamationCircleIcon" size={16} className="text-purple-600" />
+                      <span className="text-sm font-semibold text-purple-800">Conflits entre sources détectés</span>
+                    </div>
+                    <div className="space-y-2">
+                      {response.conflicts.map((conflict, i) => (
+                        <p key={`conflict-${i}`} className="text-xs text-purple-700 leading-relaxed">{conflict}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Missing texts */}
+                {response.missingTexts.length > 0 && (
+                  <div className="card p-4 border-gray-200 bg-gray-50">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Icon name="DocumentMinusIcon" size={16} className="text-gray-500" />
+                      <span className="text-sm font-semibold text-gray-700">Textes non disponibles dans le corpus</span>
+                    </div>
+                    <div className="space-y-1">
+                      {response.missingTexts.map((text, i) => (
+                        <p key={`missing-${i}`} className="text-xs text-gray-600">• {text}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Warning */}
+                <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <Icon name="ShieldExclamationIcon" size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-800 leading-relaxed">{response.warningMessage}</p>
                 </div>
-              </div>
+
+                {/* New question button */}
+                <button
+                  onClick={() => { setResponse(null); setQuestion(''); }}
+                  className="btn-secondary self-start"
+                >
+                  <Icon name="PlusIcon" size={16} />
+                  Nouvelle question
+                </button>
+              </>
             )}
+          </div>
 
-            <QAResponseSection
-              response={response}
-              onCitationClick={(c) => setSelectedCitation(c)}
-            />
-
-            {/* Conflicts */}
-            {response.conflicts.length > 0 && (
-              <div className="card p-4 border-purple-200 bg-purple-50">
-                <div className="flex items-center gap-2 mb-3">
-                  <Icon name="ExclamationCircleIcon" size={16} className="text-purple-600" />
-                  <span className="text-sm font-semibold text-purple-800">Conflits entre sources détectés</span>
-                </div>
-                <div className="space-y-2">
-                  {response.conflicts.map((conflict, i) => (
-                    <p key={`conflict-${i}`} className="text-xs text-purple-700 leading-relaxed">{conflict}</p>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Missing texts */}
-            {response.missingTexts.length > 0 && (
-              <div className="card p-4 border-gray-200 bg-gray-50">
-                <div className="flex items-center gap-2 mb-3">
-                  <Icon name="DocumentMinusIcon" size={16} className="text-gray-500" />
-                  <span className="text-sm font-semibold text-gray-700">Textes non disponibles dans le corpus</span>
-                </div>
-                <div className="space-y-1">
-                  {response.missingTexts.map((text, i) => (
-                    <p key={`missing-${i}`} className="text-xs text-gray-600">• {text}</p>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Warning */}
-            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <Icon name="ShieldExclamationIcon" size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-800 leading-relaxed">{response.warningMessage}</p>
+          {/* Citation panel — hidden in abstention mode */}
+          {!response.abstractionMode && (
+            <div className="w-80 flex-shrink-0">
+              <CitationPanel
+                citations={response.citations}
+                selectedCitation={selectedCitation}
+                onSelect={setSelectedCitation}
+                showAll={showAllCitations}
+                onToggleShowAll={() => setShowAllCitations((v) => !v)}
+              />
             </div>
-
-            {/* New question button */}
-            <button
-              onClick={() => { setResponse(null); setQuestion(''); }}
-              className="btn-secondary self-start"
-            >
-              <Icon name="PlusIcon" size={16} />
-              Nouvelle question
-            </button>
-          </div>
-
-          {/* Citation panel */}
-          <div className="w-80 flex-shrink-0">
-            <CitationPanel
-              citations={response.citations}
-              selectedCitation={selectedCitation}
-              onSelect={setSelectedCitation}
-              showAll={showAllCitations}
-              onToggleShowAll={() => setShowAllCitations((v) => !v)}
-            />
-          </div>
+          )}
         </div>
       )}
     </div>

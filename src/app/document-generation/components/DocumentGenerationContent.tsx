@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import TemplateSelector from './TemplateSelector';
 import DocumentForm from './DocumentForm';
 import DocumentPreview from './DocumentPreview';
+import AbstentionNotice from '@/components/ui/AbstentionNotice';
 import { getChatCompletion } from '@/lib/ai/chatCompletion';
 import { DOC_GEN_SYSTEM_PROMPT, DOC_GEN_USER_PROMPT } from '@/lib/ai/legalPrompts';
 
@@ -85,6 +86,8 @@ export interface GeneratedDocumentData {
   warnings: { type: 'missing' | 'review' | 'legal' | 'info'; message: string }[];
   missingFields: string[];
   isComplete: boolean;
+  abstractionMode?: boolean;
+  abstentionReason?: string;
 }
 
 type Step = 'select' | 'form' | 'preview';
@@ -96,6 +99,7 @@ export default function DocumentGenerationContent() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExporting, setIsExporting] = useState<'docx' | 'pdf' | null>(null);
   const [generatedDoc, setGeneratedDoc] = useState<GeneratedDocumentData | null>(null);
+  const [abstentionData, setAbstentionData] = useState<{ reason: string; missingFields: string[] } | null>(null);
 
   const stepConfig = {
     select: { label: 'Choisir un modèle', number: 1 },
@@ -143,6 +147,19 @@ export default function DocumentGenerationContent() {
       if (!content) throw new Error('Réponse vide du modèle');
 
       const parsed: GeneratedDocumentData = JSON.parse(content);
+
+      // Abstention mode: legal basis insufficient to generate a reliable document
+      if (parsed.abstractionMode) {
+        setAbstentionData({
+          reason: parsed.abstentionReason || 'Les fondements juridiques nécessaires à la génération de ce document ne sont pas suffisamment couverts par le corpus indexé.',
+          missingFields: parsed.missingFields,
+        });
+        setGeneratedDoc(parsed);
+        setStep('preview');
+        return;
+      }
+
+      setAbstentionData(null);
 
       if (!parsed.isComplete && parsed.missingFields.length > 0) {
         toast.error(`Champs manquants : ${parsed.missingFields.join(', ')}`);
@@ -395,14 +412,41 @@ export default function DocumentGenerationContent() {
       )}
 
       {step === 'preview' && selectedTemplate && generatedDoc && (
-        <DocumentPreview
-          template={selectedTemplate}
-          formData={formData}
-          generatedDoc={generatedDoc}
-          onBack={() => setStep('form')}
-          onExport={handleExport}
-          isExporting={isExporting}
-        />
+        abstentionData ? (
+          <div className="flex flex-col gap-4">
+            {/* Template context header */}
+            <div className="flex items-center gap-3 p-4 bg-muted/50 border border-border rounded-lg">
+              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Icon name={selectedTemplate.icon as Parameters<typeof Icon>[0]['name']} size={16} className="text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">{selectedTemplate.name}</p>
+                <p className="text-xs text-muted-foreground">{selectedTemplate.domain}</p>
+              </div>
+              <button onClick={() => { setStep('form'); setAbstentionData(null); }} className="btn-secondary ml-auto text-xs">
+                <Icon name="ArrowLeftIcon" size={14} />
+                Modifier les informations
+              </button>
+            </div>
+            <AbstentionNotice
+              moduleLabel="Génération documentaire"
+              explanation={abstentionData.reason}
+              missingElements={abstentionData.missingFields}
+              referralMessage="Ce type de document requiert une expertise juridique que le corpus actuel ne couvre pas suffisamment. Nous vous recommandons de faire appel à un avocat ou un notaire pour rédiger ce document."
+              onReset={() => { setStep('select'); setAbstentionData(null); setGeneratedDoc(null); }}
+              resetLabel="Choisir un autre modèle"
+            />
+          </div>
+        ) : (
+          <DocumentPreview
+            template={selectedTemplate}
+            formData={formData}
+            generatedDoc={generatedDoc}
+            onBack={() => setStep('form')}
+            onExport={handleExport}
+            isExporting={isExporting}
+          />
+        )
       )}
     </div>
   );

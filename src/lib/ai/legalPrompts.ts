@@ -155,8 +155,13 @@ Produis l'analyse juridique complète en JSON strict :
     }
   ],
   "overallRisk": "low" | "medium" | "high",
-  "confidenceLevel": number (0-100)
-}`;
+  "confidenceLevel": number (0-100),
+  "abstractionMode": boolean — true si le corpus est insuffisant pour qualifier la situation,
+  "abstentionReason": "string — explication de pourquoi le système s'abstient (si abstractionMode: true)",
+  "missingTexts": ["string"] — textes manquants dans le corpus qui empêchent une analyse fiable
+}
+
+Si les sources sont insuffisantes (abstractionMode: true), renseigne "abstentionReason" avec une explication claire de ce qui manque, et ne génère pas de qualification ni de droit applicable inventés.`;
 
 // ─── Document Generation Module ───────────────────────────────────────────────
 
@@ -197,5 +202,9 @@ Génère le document juridique complet en JSON strict :
     }
   ],
   "missingFields": ["string"] — champs obligatoires manquants ou incomplets,
-  "isComplete": boolean — true si aucun champ obligatoire ne manque
-}`;
+  "isComplete": boolean — true si aucun champ obligatoire ne manque,
+  "abstractionMode": boolean — true si les fondements juridiques sont insuffisants pour générer un document fiable,
+  "abstentionReason": "string — explication de pourquoi le système s'abstient (si abstractionMode: true)"
+}
+
+Si les sources juridiques sont insuffisantes pour ce type de document (abstractionMode: true), renseigne "abstentionReason" et ne génère pas de contenu documentaire inventé.`;

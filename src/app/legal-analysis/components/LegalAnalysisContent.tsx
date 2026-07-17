@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Icon from '@/components/ui/AppIcon';
 import ClarificationWizard from './ClarificationWizard';
 import AnalysisOutput from './AnalysisOutput';
+import AbstentionNotice from '@/components/ui/AbstentionNotice';
 import { getChatCompletion } from '@/lib/ai/chatCompletion';
 import {
   ANALYSIS_EXTRACT_SYSTEM_PROMPT,
@@ -39,6 +40,9 @@ export interface StructuredAnalysis {
   nextSteps: { priority: number; action: string; deadline?: string }[];
   overallRisk: 'low' | 'medium' | 'high';
   confidenceLevel: number;
+  abstractionMode?: boolean;
+  abstentionReason?: string;
+  missingTexts?: string[];
 }
 
 interface ClarificationQuestion {
@@ -55,6 +59,7 @@ export default function LegalAnalysisContent() {
   const [clarificationQuestions, setClarificationQuestions] = useState<ClarificationQuestion[]>([]);
   const [extractedFactObject, setExtractedFactObject] = useState<FactObject | null>(null);
   const [analysis, setAnalysis] = useState<StructuredAnalysis | null>(null);
+  const [abstentionData, setAbstentionData] = useState<{ reason: string; missingTexts: string[] } | null>(null);
 
   // Step 1: Extract facts + generate clarification questions via LLM
   const handleNarrativeSubmit = async () => {
@@ -115,6 +120,19 @@ export default function LegalAnalysisContent() {
       if (!content) throw new Error('Réponse vide du modèle');
 
       const parsed: StructuredAnalysis = JSON.parse(content);
+
+      // Abstention mode: corpus insufficient for reliable analysis
+      if (parsed.abstractionMode) {
+        setAbstentionData({
+          reason: parsed.abstentionReason || 'Les sources disponibles dans le corpus sont insuffisantes pour qualifier cette situation juridique de manière fiable.',
+          missingTexts: parsed.missingTexts || (parsed.factObject?.missingInfo ?? []),
+        });
+        setAnalysis(parsed);
+        setStep('result');
+        return;
+      }
+
+      setAbstentionData(null);
       setAnalysis(parsed);
       setStep('result');
     } catch (err: unknown) {
@@ -123,6 +141,15 @@ export default function LegalAnalysisContent() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleReset = () => {
+    setStep('input');
+    setFactNarrative('');
+    setAnalysis(null);
+    setAbstentionData(null);
+    setExtractedFactObject(null);
+    setClarificationQuestions([]);
   };
 
   const stepLabels: Record<AnalysisStep, string> = {
@@ -257,10 +284,21 @@ export default function LegalAnalysisContent() {
 
       {/* Step: Result */}
       {step === 'result' && analysis && (
-        <AnalysisOutput
-          analysis={analysis}
-          onBack={() => setStep('clarification')}
-        />
+        abstentionData ? (
+          <AbstentionNotice
+            moduleLabel="Analyse de situation"
+            explanation={abstentionData.reason}
+            missingElements={abstentionData.missingTexts}
+            referralMessage="Pour cette situation, nous vous recommandons de consulter un avocat inscrit au Barreau du Cameroun. JurisLex ne peut pas produire une analyse fiable sans les textes de référence nécessaires."
+            onReset={handleReset}
+            resetLabel="Analyser une nouvelle situation"
+          />
+        ) : (
+          <AnalysisOutput
+            analysis={analysis}
+            onBack={() => setStep('clarification')}
+          />
+        )
       )}
     </div>
   );
