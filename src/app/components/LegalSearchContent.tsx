@@ -26,220 +26,45 @@ export interface SearchResult {
   language: 'fr' | 'en';
 }
 
-const mockResults: SearchResult[] = [
-  {
-    id: 'result-001',
-    title: 'Acte Uniforme relatif au droit commercial général',
-    reference: 'OHADA-AUDCG-2010',
-    article: 'Art. 59',
-    excerpt: 'Tout commerçant doit tenir une comptabilité conformément aux dispositions de l\'Acte uniforme portant organisation et harmonisation des comptabilités des entreprises...',
-    page: 34,
-    domain: 'Droit commercial OHADA',
-    authority: 'OHADA',
-    date: '15/12/2010',
-    provenance: 'official',
-    legalStatus: 'verified',
-    matchScore: 98,
-    matchReason: 'Référence exacte',
-    language: 'fr',
-  },
-  {
-    id: 'result-002',
-    title: 'Code du Travail du Cameroun',
-    reference: 'LOI-92-007-1992',
-    article: 'Art. 66',
-    excerpt: 'Le contrat de travail est soumis aux règles du droit commun. Il peut être établi selon les formes que les parties contractantes décident d\'adopter...',
-    page: 22,
-    domain: 'Droit du travail',
-    authority: 'République du Cameroun',
-    date: '14/08/1992',
-    provenance: 'official',
-    legalStatus: 'verified',
-    matchScore: 94,
-    matchReason: 'Correspondance lexicale',
-    language: 'fr',
-  },
-  {
-    id: 'result-003',
-    title: 'Acte Uniforme portant organisation des procédures simplifiées de recouvrement',
-    reference: 'OHADA-AUPSRVE-1998',
-    article: 'Art. 2',
-    excerpt: 'Toute créance certaine, liquide et exigible peut faire l\'objet d\'une procédure d\'injonction de payer. La demande est présentée par requête au président de la juridiction compétente...',
-    page: 3,
-    domain: 'Droit commercial OHADA',
-    authority: 'OHADA',
-    date: '10/04/1998',
-    provenance: 'official',
-    legalStatus: 'verified',
-    matchScore: 91,
-    matchReason: 'Similarité sémantique',
-    language: 'fr',
-  },
-  {
-    id: 'result-004',
-    title: 'Acte Uniforme relatif au droit des sociétés commerciales',
-    reference: 'OHADA-AUSC-2014',
-    article: 'Art. 853-1',
-    excerpt: 'La société par actions simplifiée est une société dans laquelle les associés fixent librement, dans les statuts, les conditions et les formes dans lesquelles la société est dirigée...',
-    page: 187,
-    domain: 'Droit des sociétés',
-    authority: 'OHADA',
-    date: '30/01/2014',
-    provenance: 'official',
-    legalStatus: 'verified',
-    matchScore: 87,
-    matchReason: 'Correspondance lexicale',
-    language: 'fr',
-  },
-  {
-    id: 'result-005',
-    title: 'Code Civil camerounais — Livre III',
-    reference: 'CC-CMR-1981',
-    article: 'Art. 1134',
-    excerpt: 'Les conventions légalement formées tiennent lieu de loi à ceux qui les ont faites. Elles ne peuvent être révoquées que de leur consentement mutuel...',
-    page: 312,
-    domain: 'Droit civil',
-    authority: 'République du Cameroun',
-    date: '01/01/1981',
-    provenance: 'secondary',
-    legalStatus: 'probable',
-    matchScore: 82,
-    matchReason: 'Similarité sémantique',
-    language: 'fr',
-  },
-  {
-    id: 'result-006',
-    title: 'Décret n° 2018/366 portant organisation du Ministère du Travail',
-    reference: 'DECRET-2018-366',
-    article: 'Art. 12',
-    excerpt: 'L\'Inspection du travail est chargée de veiller à l\'application des dispositions légales et réglementaires relatives au travail, à la main-d\'œuvre et à la prévoyance sociale...',
-    page: 7,
-    domain: 'Droit du travail',
-    authority: 'République du Cameroun',
-    date: '20/06/2018',
-    provenance: 'official',
-    legalStatus: 'verified',
-    matchScore: 79,
-    matchReason: 'Correspondance lexicale',
-    language: 'fr',
-  },
-  {
-    id: 'result-007',
-    title: 'Acte Uniforme portant organisation des sûretés',
-    reference: 'OHADA-AUS-2010',
-    article: 'Art. 4',
-    excerpt: 'Les sûretés sont constituées dans l\'intérêt d\'un créancier pour garantir l\'exécution d\'une obligation. Elles peuvent être personnelles ou réelles...',
-    page: 4,
-    domain: 'Droit commercial OHADA',
-    authority: 'OHADA',
-    date: '15/12/2010',
-    provenance: 'official',
-    legalStatus: 'verified',
-    matchScore: 76,
-    matchReason: 'Similarité sémantique',
-    language: 'fr',
-  },
-  {
-    id: 'result-008',
-    title: 'Loi n° 2003-008 relative à la répression des infractions',
-    reference: 'LOI-2003-008',
-    article: 'Art. 3',
-    excerpt: 'Toute personne qui, par quelque moyen que ce soit, contrefait ou falsifie un acte juridique ou un document officiel est punie d\'un emprisonnement de deux à cinq ans...',
-    page: 2,
-    domain: 'Droit pénal',
-    authority: 'République du Cameroun',
-    date: '10/07/2003',
-    provenance: 'secondary',
-    legalStatus: 'unknown',
-    matchScore: 71,
-    matchReason: 'Correspondance lexicale',
-    language: 'fr',
-  },
-  {
-    id: 'result-009',
-    title: 'Règlement COBAC R-2001/07 relatif au contrôle interne',
-    reference: 'COBAC-R-2001-07',
-    article: 'Art. 8',
-    excerpt: 'Les établissements assujettis doivent se doter d\'un système de contrôle interne permettant notamment de vérifier que les opérations réalisées respectent les procédures internes...',
-    page: 5,
-    domain: 'Droit bancaire COBAC',
-    authority: 'COBAC',
-    date: '01/01/2002',
-    provenance: 'official',
-    legalStatus: 'probable',
-    matchScore: 68,
-    matchReason: 'Similarité sémantique',
-    language: 'fr',
-  },
-  {
-    id: 'result-010',
-    title: 'Ordonnance n° 74-1 du 6 juillet 1974 fixant le régime foncier',
-    reference: 'ORD-74-1-1974',
-    article: 'Art. 1',
-    excerpt: 'Les terres du territoire national constituent la propriété publique ou privée de l\'État, des collectivités publiques ou des particuliers selon les distinctions établies par la présente ordonnance...',
-    page: 1,
-    domain: 'Droit foncier',
-    authority: 'République du Cameroun',
-    date: '06/07/1974',
-    provenance: 'secondary',
-    legalStatus: 'superseded',
-    matchScore: 62,
-    matchReason: 'Correspondance lexicale',
-    language: 'fr',
-  },
-  {
-    id: 'result-011',
-    title: 'Loi n° 2010/021 régissant le commerce électronique',
-    reference: 'LOI-2010-021',
-    article: 'Art. 22',
-    excerpt: 'Le prestataire de services de certification électronique est responsable du préjudice causé aux personnes qui se sont fiées raisonnablement aux certificats qu\'il délivre...',
-    page: 15,
-    domain: 'Droit numérique',
-    authority: 'République du Cameroun',
-    date: '21/12/2010',
-    provenance: 'official',
-    legalStatus: 'verified',
-    matchScore: 58,
-    matchReason: 'Similarité sémantique',
-    language: 'fr',
-  },
-  {
-    id: 'result-012',
-    title: 'Acte Uniforme relatif au droit de l\'arbitrage',
-    reference: 'OHADA-AUA-2017',
-    article: 'Art. 10',
-    excerpt: 'Le tribunal arbitral est seul compétent pour statuer sur les contestations relatives à son existence ou à sa validité. A cet effet, il peut statuer sur sa propre compétence...',
-    page: 8,
-    domain: 'Droit commercial OHADA',
-    authority: 'OHADA',
-    date: '23/11/2017',
-    provenance: 'official',
-    legalStatus: 'verified',
-    matchScore: 55,
-    matchReason: 'Correspondance lexicale',
-    language: 'fr',
-  },
-];
-
 export default function LegalSearchContent() {
   const [searchMode, setSearchMode] = useState<SearchMode>('semantic');
   const [query, setQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [hasSearched, setHasSearched] = useState(true);
-  const [results, setResults] = useState<SearchResult[]>(mockResults);
-  const [selectedResult, setSelectedResult] = useState<SearchResult | null>(mockResults[0]);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({});
+  const [searchError, setSearchError] = useState<string | null>(null);
 
-  // Backend integration point: POST /api/search with { query, mode, filters }
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!query.trim()) return;
     setIsSearching(true);
-    setTimeout(() => {
-      setResults(mockResults);
-      setHasSearched(true);
+    setHasSearched(true);
+    setSearchError(null);
+    setSelectedResult(null);
+
+    try {
+      const response = await fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: query.trim(), mode: searchMode, filters: activeFilters }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: 'Erreur réseau' }));
+        throw new Error(err.error || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      setResults(data.results || []);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur de recherche';
+      setSearchError(msg);
+      setResults([]);
+    } finally {
       setIsSearching(false);
-    }, 800);
+    }
   };
 
   const modeConfig = {
@@ -255,12 +80,12 @@ export default function LegalSearchContent() {
         <div>
           <h1 className="page-title">Recherche juridique</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Corpus indexé : 3 domaines — 4 872 provisions — Dernière ingestion : 14/07/2026
+            Corpus indexé : OHADA · Cameroun · COBAC — Recherche hybride vectorielle activée
           </p>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground font-mono-ref">
-            {results.length} résultat{results.length !== 1 ? 's' : ''}
+            {hasSearched && !isSearching ? `${results.length} résultat${results.length !== 1 ? 's' : ''}` : ''}
           </span>
         </div>
       </div>
@@ -334,8 +159,8 @@ export default function LegalSearchContent() {
         {/* Mode hint */}
         <p className="text-xs text-muted-foreground mt-2">
           {searchMode === 'exact' && 'Recherche déterministe par numéro de loi, décret, règlement ou article — résultats prioritaires.'}
-          {searchMode === 'lexical' && 'Recherche par mots et expressions exactes dans le corpus indexé.'}
-          {searchMode === 'semantic' && 'Reformulez en langage courant — le moteur identifie les dispositions pertinentes par similarité sémantique.'}
+          {searchMode === 'lexical' && 'Recherche par mots et expressions exactes dans le corpus indexé via PostgreSQL full-text search.'}
+          {searchMode === 'semantic' && 'Reformulez en langage courant — le moteur identifie les dispositions pertinentes par similarité vectorielle (OpenAI + pgvector) avec re-classement hybride.'}
         </p>
       </div>
 
@@ -390,6 +215,17 @@ export default function LegalSearchContent() {
                   <div className="h-3 bg-muted rounded w-5/6" />
                 </div>
               ))
+            ) : searchError ? (
+              <div className="card flex-1">
+                <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
+                  <Icon name="ExclamationTriangleIcon" size={40} className="text-amber-500 mb-4" />
+                  <p className="text-base font-semibold text-foreground mb-2">Erreur de recherche</p>
+                  <p className="text-sm text-muted-foreground max-w-xs">{searchError}</p>
+                  <button onClick={handleSearch} className="btn-secondary mt-4 text-sm">
+                    Réessayer
+                  </button>
+                </div>
+              </div>
             ) : results.length === 0 ? (
               <div className="card flex-1">
                 <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
