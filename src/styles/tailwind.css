@@ -1,0 +1,225 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #F4F5F7;
+  --foreground: #0F1623;
+  --primary: #1B2B5E;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E8EBF4;
+  --secondary-foreground: #1B2B5E;
+  --accent: #C8860A;
+  --accent-foreground: #FFFFFF;
+  --muted: #E8EBF4;
+  --muted-foreground: #6B7280;
+  --card: #FFFFFF;
+  --card-foreground: #0F1623;
+  --border: #D1D5DB;
+  --input: #E8EBF4;
+  --ring: #1B2B5E;
+  --radius: 8px;
+  --font-sans: var(--font-dm-sans), 'DM Sans', sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), 'IBM Plex Mono', monospace;
+
+  --status-verified: #15803D;
+  --status-verified-bg: #DCFCE7;
+  --status-probable: #B45309;
+  --status-probable-bg: #FEF3C7;
+  --status-unknown: #6B7280;
+  --status-unknown-bg: #F3F4F6;
+  --status-repealed: #DC2626;
+  --status-repealed-bg: #FEE2E2;
+  --status-superseded: #7C3AED;
+  --status-superseded-bg: #EDE9FE;
+
+  --claim-supported: #15803D;
+  --claim-supported-bg: #DCFCE7;
+  --claim-inferred: #1D4ED8;
+  --claim-inferred-bg: #DBEAFE;
+  --claim-uncertain: #B45309;
+  --claim-uncertain-bg: #FEF3C7;
+  --claim-unsupported: #DC2626;
+  --claim-unsupported-bg: #FEE2E2;
+  --claim-conflicting: #7C3AED;
+  --claim-conflicting-bg: #EDE9FE;
+
+  --risk-low: #15803D;
+  --risk-low-bg: #DCFCE7;
+  --risk-medium: #B45309;
+  --risk-medium-bg: #FEF3C7;
+  --risk-high: #DC2626;
+  --risk-high-bg: #FEE2E2;
+
+  --sidebar-width: 240px;
+  --sidebar-collapsed: 64px;
+  --topbar-height: 60px;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  h1, h2, h3, h4, h5, h6, p {
+    margin: 0;
+  }
+}
+
+@layer utilities {
+  .font-mono-ref {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .sidebar-transition {
+    transition: width 300ms ease, transform 300ms ease;
+  }
+  .fade-in {
+    animation: fadeIn 200ms ease forwards;
+  }
+  .slide-up {
+    animation: slideUp 200ms ease forwards;
+  }
+  .scale-in {
+    animation: scaleIn 150ms ease forwards;
+  }
+  .claim-badge-supported {
+    background-color: var(--claim-supported-bg);
+    color: var(--claim-supported);
+  }
+  .claim-badge-inferred {
+    background-color: var(--claim-inferred-bg);
+    color: var(--claim-inferred);
+  }
+  .claim-badge-uncertain {
+    background-color: var(--claim-uncertain-bg);
+    color: var(--claim-uncertain);
+  }
+  .claim-badge-unsupported {
+    background-color: var(--claim-unsupported-bg);
+    color: var(--claim-unsupported);
+  }
+  .claim-badge-conflicting {
+    background-color: var(--claim-conflicting-bg);
+    color: var(--claim-conflicting);
+  }
+  .status-badge-verified {
+    background-color: var(--status-verified-bg);
+    color: var(--status-verified);
+  }
+  .status-badge-probable {
+    background-color: var(--status-probable-bg);
+    color: var(--status-probable);
+  }
+  .status-badge-unknown {
+    background-color: var(--status-unknown-bg);
+    color: var(--status-unknown);
+  }
+  .status-badge-repealed {
+    background-color: var(--status-repealed-bg);
+    color: var(--status-repealed);
+  }
+  .status-badge-superseded {
+    background-color: var(--status-superseded-bg);
+    color: var(--status-superseded);
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 2px;
+  }
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg transition-all duration-150 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground text-sm font-medium rounded-lg border border-border transition-all duration-150 hover:bg-muted active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-150 hover:bg-muted active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-accent {
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-accent text-accent-foreground text-sm font-medium rounded-lg transition-all duration-150 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .card {
+    @apply bg-card rounded-lg border border-border shadow-sm;
+  }
+.input-field  {
+    @apply w-full px-3 py-2 bg-card border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:border-primary transition-colors;
+  }
+  .label {
+    @apply block text-sm font-medium text-foreground mb-1;
+  }
+  .helper-text {
+    @apply text-xs text-muted-foreground mt-1;
+  }
+  .error-text {
+    @apply text-xs text-red-600 mt-1;
+  }
+  .section-header {
+    @apply text-lg font-semibold text-foreground;
+  }
+  .page-title {
+    @apply text-2xl font-semibold text-foreground;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes pulse-highlight {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: #FEF3C7; }
+}
+.pulse-highlight {
+  animation: pulse-highlight 600ms ease;
+}
