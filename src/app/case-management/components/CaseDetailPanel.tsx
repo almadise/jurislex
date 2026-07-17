@@ -5,6 +5,7 @@ import Icon from '@/components/ui/AppIcon';
 import StatusBadge from '@/components/ui/StatusBadge';
 import type { Matter } from './CaseManagementContent';
 import { caseService } from '@/lib/services/caseService';
+import CaseDossierGraph from './CaseDossierGraph';
 
 interface CaseDetailPanelProps {
   matter: Matter;
@@ -28,7 +29,7 @@ const timelineTypeConfig = {
 };
 
 export default function CaseDetailPanel({ matter, onClose }: CaseDetailPanelProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'parties' | 'analyses' | 'documents'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'parties' | 'analyses' | 'documents' | 'graphe'>('overview');
 
   const [timeline, setTimeline] = useState<any[]>([]);
   const [parties, setParties] = useState<any[]>([]);
@@ -86,6 +87,7 @@ export default function CaseDetailPanel({ matter, onClose }: CaseDetailPanelProp
     { id: 'parties', label: 'Parties & Preuves', icon: 'UsersIcon' },
     { id: 'analyses', label: 'Analyses', icon: 'DocumentMagnifyingGlassIcon' },
     { id: 'documents', label: 'Documents', icon: 'DocumentTextIcon' },
+    { id: 'graphe', label: 'Graphe', icon: 'ShareIcon' },
   ] as const;
 
   const LoadingSkeleton = () => (
@@ -360,6 +362,12 @@ export default function CaseDetailPanel({ matter, onClose }: CaseDetailPanelProp
                 </div>
               ))
             )}
+          </div>
+        )}
+
+        {activeTab === 'graphe' && (
+          <div className="fade-in h-full" style={{ minHeight: 480 }}>
+            <CaseDossierGraph matter={matter} />
           </div>
         )}
       </div>
