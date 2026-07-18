@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { createClient } from '@/lib/supabase/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+function getSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    throw new Error('Supabase URL or anon key is not configured');
+  }
+  return createSupabaseClient(url, key);
+}
 
 export interface SearchResult {
   id: string;
@@ -104,7 +113,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    const supabase = getSupabaseClient();
 
     const { filterDomain, filterAuthority, filterLegalStatus, filterProvenance, filterLanguage } =
       buildFilterArrays(filters);
