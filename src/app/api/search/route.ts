@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { createClient } from '@/lib/supabase/server';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -108,6 +103,8 @@ export async function POST(req: NextRequest) {
     if (!query?.trim()) {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
     }
+
+    const supabase = await createClient();
 
     const { filterDomain, filterAuthority, filterLegalStatus, filterProvenance, filterLanguage } =
       buildFilterArrays(filters);
