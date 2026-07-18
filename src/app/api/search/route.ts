@@ -125,7 +125,10 @@ export async function POST(req: NextRequest) {
         filter_language: filterLanguage,
         result_limit: 20,
       });
-      if (error) throw error;
+      if (error) {
+        console.error('[search/exact] Supabase RPC error:', JSON.stringify(error));
+        throw new Error(error.message || 'Erreur RPC exact');
+      }
       results = (data as ProvisionRow[]).map(mapRow);
 
     } else if (mode === 'lexical') {
@@ -139,7 +142,10 @@ export async function POST(req: NextRequest) {
         filter_language: filterLanguage,
         result_limit: 20,
       });
-      if (error) throw error;
+      if (error) {
+        console.error('[search/lexical] Supabase RPC error:', JSON.stringify(error));
+        throw new Error(error.message || 'Erreur RPC lexical');
+      }
       results = (data as ProvisionRow[]).map(mapRow);
 
     } else {
@@ -165,7 +171,10 @@ export async function POST(req: NextRequest) {
           result_limit: 30,
         }
       );
-      if (semanticError) throw semanticError;
+      if (semanticError) {
+        console.error('[search/semantic] Supabase RPC error:', JSON.stringify(semanticError));
+        throw new Error(semanticError.message || 'Erreur RPC sémantique');
+      }
 
       // 3. Also run lexical search for hybrid re-ranking
       const { data: lexicalData } = await supabase.rpc('search_provisions_lexical', {
