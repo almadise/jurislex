@@ -90,30 +90,50 @@ if (typeof window !== 'undefined' && !(window as any).__sb_patched__) {
 }
 
 export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => (canUseCookies() ? fromCookies() : fromStorage()),
-        setAll(cookiesToSet) {
-          if (typeof document === 'undefined') return;
-          if (canUseCookies()) {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              value ? setCookie(name, value, options) : deleteCookie(name)
-            );
-          } else {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              try {
-                value
-                  ? localStorage.setItem(`${PFX}${name}`, value)
-                  : localStorage.removeItem(`${PFX}${name}`);
-              } catch {}
-              if (value) setCookie(name, value, options);
-            });
-          }
-        },
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+  if (!url || !key) {
+    // Return a no-op stub during build/SSR when env vars are not available
+    return {
+      auth: {
+        getSession: async () => ({ data: { session: null }, error: null }),
+        onAuthStateChange: (_event: any, _cb: any) => ({ data: { subscription: { unsubscribe: () => {} } } }),
+        signUp: async () => ({ data: null, error: new Error('Supabase not configured') }),
+        signInWithPassword: async () => ({ data: null, error: new Error('Supabase not configured') }),
+        signOut: async () => ({ error: null }),
+        getUser: async () => ({ data: { user: null }, error: null }),
       },
-    }
-  );
+      from: (_table: string) => ({
+        select: (_cols?: string) => ({
+          eq: (_col: string, _val: any) => ({
+            single: async () => ({ data: null, error: null }),
+          }),
+        }),
+      }),
+    } as any;
+  }
+
+  return createBrowserClient(url, key, {
+    cookies: {
+      getAll: () => (canUseCookies() ? fromCookies() : fromStorage()),
+      setAll(cookiesToSet) {
+        if (typeof document === 'undefined') return;
+        if (canUseCookies()) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            value ? setCookie(name, value, options) : deleteCookie(name)
+          );
+        } else {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            try {
+              value
+                ? localStorage.setItem(`${PFX}${name}`, value)
+                : localStorage.removeItem(`${PFX}${name}`);
+            } catch {}
+            if (value) setCookie(name, value, options);
+          });
+        }
+      },
+    },
+  });
 }

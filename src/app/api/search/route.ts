@@ -5,8 +5,8 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 function getSupabaseClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
   if (!url || !key) {
     throw new Error('Supabase URL or anon key is not configured');
   }
