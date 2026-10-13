@@ -16,15 +16,16 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Recherche juridique', href: '/', icon: 'MagnifyingGlassIcon', group: 'Recherche' },
-  { label: 'Questions & Réponses', href: '/legal-q-a', icon: 'ChatBubbleLeftRightIcon', badge: 2, group: 'Recherche' },
+  { label: 'Questions & Réponses', href: '/legal-q-a', icon: 'ChatBubbleLeftRightIcon', group: 'Recherche' },
   { label: 'Analyse de situation', href: '/legal-analysis', icon: 'DocumentMagnifyingGlassIcon', group: 'Analyse' },
   { label: 'Génération documentaire', href: '/document-generation', icon: 'DocumentTextIcon', group: 'Analyse' },
-  { label: 'Gestion des dossiers', href: '/case-management', icon: 'FolderOpenIcon', badge: 3, group: 'Dossiers' },
+  { label: 'Gestion des dossiers', href: '/case-management', icon: 'FolderOpenIcon', group: 'Dossiers' },
+  { label: 'Graphe du dossier', href: '/matter-graph', icon: 'ShareIcon', group: 'Dossiers' },
+  { label: 'Observatoire', href: '/observatory', icon: 'EyeIcon', group: 'Corpus' },
 ];
 
 const bottomItems: NavItem[] = [
-  { label: 'Paramètres', href: '/settings', icon: 'Cog6ToothIcon' },
-  { label: 'Connexion', href: '/sign-up-login', icon: 'ArrowRightOnRectangleIcon' },
+  { label: 'Compte / Connexion', href: '/sign-up-login', icon: 'ArrowRightOnRectangleIcon' },
 ];
 
 interface SidebarProps {

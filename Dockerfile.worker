@@ -1,0 +1,24 @@
+# JurisLex worker — pipeline Python (OCR / extract / quality / upload)
+FROM python:3.11-slim-bookworm
+
+WORKDIR /app
+
+# OCR system deps (optionnels si le job n'appelle pas 01_ocr)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tesseract-ocr \
+    tesseract-ocr-fra \
+    ghostscript \
+    poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY scripts/requirements.txt /app/scripts/requirements.txt
+RUN pip install --no-cache-dir -r /app/scripts/requirements.txt
+
+COPY scripts/ /app/scripts/
+# Corpus et build montés en volume en runtime
+RUN mkdir -p /app/build /app/legal-content
+
+ENV PYTHONUNBUFFERED=1
+ENV JURISLEX_INGESTION_JOBS_PATH=/app/build/ingestion-jobs.json
+
+CMD ["python", "scripts/worker.py"]

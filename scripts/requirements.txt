@@ -1,0 +1,10 @@
+# JurisLex — pipeline d'ingestion de la base légale
+pypdf>=4.2.0
+openai>=1.40.0
+supabase>=2.7.0
+
+# OCR (étape 1) — nécessite aussi les binaires système Tesseract + Ghostscript
+ocrmypdf>=16.0.0
+
+# C1 worker async (file Redis)
+redis>=5.0.0

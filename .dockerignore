@@ -1,0 +1,12 @@
+.git
+.next
+node_modules
+legal-content
+*.pdf
+agent-transcripts
+.cursor
+**/__pycache__
+*.pyc
+.env
+.env.*
+!.env.example

@@ -8,7 +8,16 @@ interface ClarificationQuestion {
   question: string;
   impact: string;
   required: boolean;
+  category?: string;
 }
+
+const categoryLabels: Record<string, string> = {
+  qualification: 'Qualification',
+  competence: 'Compétence',
+  delai: 'Délai',
+  preuve: 'Preuve',
+  document: 'Document',
+};
 
 interface ClarificationWizardProps {
   questions: ClarificationQuestion[];
@@ -91,10 +100,15 @@ export default function ClarificationWizard({
               <Icon name="QuestionMarkCircleIcon" size={16} className="text-primary" />
             </div>
             <div>
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <span className="text-base font-semibold text-foreground leading-snug">
                   {currentQuestion.question}
                 </span>
+                {currentQuestion.category && (
+                  <span className="text-[11px] px-2 py-0.5 bg-primary/10 text-primary rounded-full font-medium flex-shrink-0">
+                    {categoryLabels[currentQuestion.category] || currentQuestion.category}
+                  </span>
+                )}
                 {!currentQuestion.required && (
                   <span className="text-[11px] px-2 py-0.5 bg-muted text-muted-foreground rounded-full font-medium flex-shrink-0">
                     Facultatif

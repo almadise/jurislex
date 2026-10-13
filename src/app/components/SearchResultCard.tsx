@@ -14,12 +14,15 @@ interface SearchResultCardProps {
 const domainColors: Record<string, string> = {
   'Droit commercial OHADA': 'bg-blue-100 text-blue-700',
   'Droit du travail': 'bg-green-100 text-green-700',
+  'Droit du travail / sécurité sociale': 'bg-green-100 text-green-700',
   'Droit civil': 'bg-purple-100 text-purple-700',
   'Droit des sociétés': 'bg-indigo-100 text-indigo-700',
   'Droit pénal': 'bg-red-100 text-red-700',
   'Droit foncier': 'bg-amber-100 text-amber-700',
   'Droit bancaire COBAC': 'bg-cyan-100 text-cyan-700',
   'Droit numérique': 'bg-pink-100 text-pink-700',
+  'Marchés publics': 'bg-orange-100 text-orange-700',
+  'Fiscalité et changes': 'bg-teal-100 text-teal-700',
 };
 
 export default function SearchResultCard({ result, isSelected, onClick }: SearchResultCardProps) {

@@ -37,36 +37,55 @@ export default function NewCaseModal({ onClose, onCreated }: NewCaseModalProps) 
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<NewCaseForm>();
+    setError,
+  } = useForm<NewCaseForm>({
+    defaultValues: { riskLevel: 'medium' },
+  });
 
   const onSubmit = async (data: NewCaseForm) => {
-    await new Promise((r) => setTimeout(r, 600));
-    const refNum = String(Math.floor(Math.random() * 900) + 100);
-    const newMatter: Matter = {
-      id: `matter-${Date.now()}`,
-      reference: `DOS-2026-0${refNum}`,
-      title: data.title,
-      domain: data.domain,
-      parties: [data.party1, data.party2].filter(Boolean),
-      status: 'draft',
-      analyses: 0,
-      documents: 0,
-      lastActivity: '17/07/2026',
-      createdAt: '17/07/2026',
-      assignedTo: 'Fotso Mbarga',
-      riskLevel: data.riskLevel,
-      tags: data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
-    };
-    onCreated(newMatter);
+    try {
+      const res = await fetch('/api/matters', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: data.title,
+          domain: data.domain,
+          party1: data.party1,
+          party2: data.party2,
+          riskLevel: data.riskLevel,
+          tags: data.tags,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.erreur || 'Création impossible');
+      }
+      onCreated(json.matter as Matter);
+    } catch (e) {
+      setError('title', { message: (e as Error).message });
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="new-case-title">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="new-case-title"
+    >
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative bg-card rounded-xl border border-border shadow-modal w-full max-w-lg scale-in">
         <div className="flex items-center justify-between p-5 border-b border-border">
-          <h2 id="new-case-title" className="text-base font-semibold text-foreground">Nouveau dossier</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors" aria-label="Fermer">
+          <h2 id="new-case-title" className="text-base font-semibold text-foreground">
+            Nouveau dossier
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+            aria-label="Fermer"
+          >
             <Icon name="XMarkIcon" size={18} className="text-muted-foreground" />
           </button>
         </div>
@@ -80,9 +99,13 @@ export default function NewCaseModal({ onClose, onCreated }: NewCaseModalProps) 
               id="new-case-title-input"
               className={`input-field ${errors.title ? 'border-red-400' : ''}`}
               placeholder="Ex: Licenciement abusif — Nom du salarié c/ Employeur"
-              {...register('title', { required: 'L\'intitulé est obligatoire.' })}
+              {...register('title', { required: "L'intitulé est obligatoire." })}
             />
-            {errors.title && <p className="error-text" role="alert">{errors.title.message}</p>}
+            {errors.title && (
+              <p className="error-text" role="alert">
+                {errors.title.message}
+              </p>
+            )}
           </div>
 
           <div>
@@ -96,10 +119,16 @@ export default function NewCaseModal({ onClose, onCreated }: NewCaseModalProps) 
             >
               <option value="">Sélectionner un domaine...</option>
               {domainOptions.map((d) => (
-                <option key={`domain-select-${d}`} value={d}>{d}</option>
+                <option key={`domain-select-${d}`} value={d}>
+                  {d}
+                </option>
               ))}
             </select>
-            {errors.domain && <p className="error-text" role="alert">{errors.domain.message}</p>}
+            {errors.domain && (
+              <p className="error-text" role="alert">
+                {errors.domain.message}
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -113,7 +142,11 @@ export default function NewCaseModal({ onClose, onCreated }: NewCaseModalProps) 
                 placeholder="Nom de la partie 1"
                 {...register('party1', { required: 'Requis.' })}
               />
-              {errors.party1 && <p className="error-text" role="alert">{errors.party1.message}</p>}
+              {errors.party1 && (
+                <p className="error-text" role="alert">
+                  {errors.party1.message}
+                </p>
+              )}
             </div>
             <div>
               <label className="label" htmlFor="new-case-party2">
@@ -149,14 +182,17 @@ export default function NewCaseModal({ onClose, onCreated }: NewCaseModalProps) 
               placeholder="licenciement, indemnités, urgent..."
               {...register('tags')}
             />
-            <p className="helper-text">Facultatif — facilitent la recherche et le filtrage.</p>
           </div>
 
           <div className="flex items-center gap-3 pt-2 border-t border-border">
             <button type="button" onClick={onClose} className="btn-secondary flex-1 justify-center">
               Annuler
             </button>
-            <button type="submit" disabled={isSubmitting} className="btn-primary flex-1 justify-center">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="btn-primary flex-1 justify-center"
+            >
               {isSubmitting ? (
                 <>
                   <Icon name="ArrowPathIcon" size={16} className="animate-spin" />

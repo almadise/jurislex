@@ -1,3 +1,13 @@
+# Secrets — la service_role key contourne RLS, sa fuite compromet toute la base
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Corpus juridique (372 Mo de PDF) et artefacts d'ingestion
+legal-content/
+scripts/.ocr_journal.json
+
 # Node modules
 node_modules/
 package-lock.json
@@ -35,3 +45,7 @@ jest-test-results.json
 
 # Optional: if using TurboRepo or monorepo
 turbo/
+# Python / outils
+__pycache__/
+*.pyc
+.serena/

@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Icon from '@/components/ui/AppIcon';
-
+import { toast } from 'sonner';
 import ClarificationWizard from './ClarificationWizard';
 import AnalysisOutput from './AnalysisOutput';
+import { fetchCurrentUser } from '@/lib/auth/client';
 
 export type AnalysisStep = 'input' | 'clarification' | 'result';
 
@@ -21,153 +23,219 @@ export interface FactObject {
   missingInfo: string[];
   urgencies: string[];
   confidenceLevel: number;
+  hypotheses?: string[];
+  domainGuess?: string;
+}
+
+export interface DeterministicCalc {
+  id: string;
+  label: string;
+  result: string;
+  unit?: string;
+  formula: string;
+  assumptions: string[];
+  legalReferences: string[];
+  status: 'computed' | 'blocked_missing_input' | 'hypothesis_only';
 }
 
 export interface StructuredAnalysis {
+  id?: string;
   factObject: FactObject;
-  applicableLaw: { reference: string; article: string; relevance: string }[];
+  applicableLaw: {
+    reference: string;
+    article: string;
+    relevance: string;
+    sourceId?: string;
+    page?: number | null;
+    excerpt?: string;
+    verified?: boolean;
+  }[];
   qualification: string;
   risks: { level: 'low' | 'medium' | 'high'; description: string }[];
   evidence: { item: string; status: 'available' | 'to_gather' | 'missing' }[];
   nextSteps: { priority: number; action: string; deadline?: string }[];
   overallRisk: 'low' | 'medium' | 'high';
   confidenceLevel: number;
+  calculations?: DeterministicCalc[];
+  userFacts?: string[];
+  systemHypotheses?: string[];
+  warningMessage?: string;
+  matterId?: string | null;
+  engine?: string;
 }
 
-const mockAnalysis: StructuredAnalysis = {
-  factObject: {
-    parties: [
-      { name: 'Mme Nkeng Abanda', quality: 'Salariée / Demanderesse potentielle' },
-      { name: 'SARL Fotso & Associés', quality: 'Employeur / Défendeur potentiel' },
-    ],
-    jurisdiction: 'Tribunal de Grande Instance de Douala — Chambre sociale',
-    dates: [
-      { label: 'Date d\'embauche', date: '03/01/2019' },
-      { label: 'Date de notification de licenciement', date: '28/05/2026' },
-      { label: 'Fin du préavis (estimée)', date: '12/07/2026' },
-    ],
-    legalRelation: 'Contrat de travail à durée indéterminée — Droit du travail camerounais',
-    admittedFacts: [
-      'Contrat de travail à durée indéterminée depuis le 03/01/2019',
-      'Notification de licenciement reçue le 28/05/2026',
-      'Ancienneté de 7 ans et 5 mois à la date de licenciement',
-      'Salaire mensuel brut de 450 000 FCFA',
-    ],
-    disputedFacts: [
-      'Nature exacte du motif invoqué (économique vs personnel)',
-      'Consultation préalable des délégués du personnel (non confirmée)',
-      'Notification à l\'Inspection du travail (non vérifiée)',
-    ],
-    amounts: [
-      { label: 'Salaire mensuel brut', amount: '450 000 FCFA' },
-      { label: 'Indemnité de licenciement estimée', amount: '630 000 FCFA' },
-      { label: 'Préavis (3 mois estimé)', amount: '1 350 000 FCFA' },
-    ],
-    objective: 'Contester le licenciement et obtenir paiement des indemnités dues',
-    legalIssues: [
-      'Le licenciement respecte-t-il la procédure légale camerounaise ?',
-      'L\'indemnité de licenciement est-elle correctement calculée ?',
-      'Y a-t-il lieu à licenciement abusif ?',
-      'Quel est le délai de prescription de l\'action ?',
-    ],
-    missingInfo: [
-      'Copie du contrat de travail signé',
-      'Lettre de licenciement (motif exact)',
-      'Preuve de consultation des délégués du personnel',
-      'Bulletins de salaire des 12 derniers mois',
-    ],
-    urgencies: [
-      'Délai de prescription de l\'action prud\'homale : 2 ans à compter de la notification — échéance au 28/05/2028',
-      'Vérifier si le préavis a été effectué ou payé en lieu et place',
-    ],
-    confidenceLevel: 72,
-  },
-  applicableLaw: [
-    { reference: 'LOI-92-007-1992', article: 'Art. 39', relevance: 'Définition du licenciement abusif' },
-    { reference: 'LOI-92-007-1992', article: 'Art. 40', relevance: 'Conditions du licenciement économique' },
-    { reference: 'LOI-92-007-1992', article: 'Art. 41', relevance: 'Calcul de l\'indemnité de licenciement' },
-    { reference: 'LOI-92-007-1992', article: 'Art. 42', relevance: 'Procédure de licenciement collectif' },
-    { reference: 'LOI-92-007-1992', article: 'Art. 70', relevance: 'Délai de prescription des actions' },
-    { reference: 'CC-CMR-1981', article: 'Art. 1382', relevance: 'Responsabilité délictuelle (dommages-intérêts)' },
-  ],
-  qualification: 'Licenciement potentiellement abusif pour non-respect de la procédure légale (absence de consultation des délégués du personnel et de notification à l\'Inspection du travail). Sous réserve de confirmation des faits disputés, Mme Nkeng Abanda dispose d\'une action en licenciement abusif avec demande d\'indemnisation complémentaire.',
-  risks: [
-    { level: 'high', description: 'Absence de preuve de consultation des délégués du personnel — élément constitutif du licenciement abusif' },
-    { level: 'medium', description: 'Motif de licenciement non clairement établi — peut affecter la qualification juridique' },
-    { level: 'low', description: 'Délai de prescription confortable (2 ans) — aucune urgence procédurale immédiate' },
-  ],
-  evidence: [
-    { item: 'Lettre de licenciement', status: 'to_gather' },
-    { item: 'Contrat de travail signé', status: 'to_gather' },
-    { item: 'Bulletins de salaire (12 mois)', status: 'to_gather' },
-    { item: 'Procès-verbal de consultation des délégués', status: 'missing' },
-    { item: 'Accusé de réception de la notification à l\'Inspection', status: 'missing' },
-    { item: 'Attestation de travail', status: 'available' },
-  ],
-  nextSteps: [
-    { priority: 1, action: 'Rassembler la lettre de licenciement et le contrat de travail', deadline: '31/07/2026' },
-    { priority: 2, action: 'Vérifier auprès de l\'Inspection du travail si la notification a été reçue', deadline: '07/08/2026' },
-    { priority: 3, action: 'Calculer précisément les indemnités dues sur base des bulletins de salaire', deadline: '15/08/2026' },
-    { priority: 4, action: 'Envoyer une mise en demeure à l\'employeur pour paiement des indemnités', deadline: '22/08/2026' },
-    { priority: 5, action: 'Saisir le Tribunal de Grande Instance de Douala si absence de réponse', deadline: '28/08/2026' },
-  ],
-  overallRisk: 'medium',
-  confidenceLevel: 72,
-};
+interface ClarificationQuestion {
+  id: string;
+  question: string;
+  impact: string;
+  required: boolean;
+  category?: string;
+}
 
-const clarificationQuestions = [
-  {
-    id: 'q-001',
-    question: "Avez-vous reçu une lettre de licenciement précisant le motif exact ? Si oui, quel motif est mentionné (économique, faute, autre) ?",
-    impact: 'Qualification juridique du licenciement et procédure applicable',
-    required: true,
-  },
-  {
-    id: 'q-002',
-    question: "Y a-t-il des délégués du personnel dans l'entreprise, et avez-vous connaissance d'une réunion de consultation avant votre licenciement ?",
-    impact: 'Validité de la procédure — élément constitutif du licenciement abusif',
-    required: true,
-  },
-  {
-    id: 'q-003',
-    question: "Quel est votre salaire mensuel brut moyen sur les 12 derniers mois ? Avez-vous vos bulletins de salaire ?",
-    impact: 'Calcul précis de l\'indemnité de licenciement et du préavis',
-    required: true,
-  },
-  {
-    id: 'q-004',
-    question: "Avez-vous effectué votre préavis ou a-t-il été payé en lieu et place ? Êtes-vous toujours dans la période de préavis ?",
-    impact: 'Urgence procédurale et montant des indemnités',
-    required: false,
-  },
-];
+interface MatterOption {
+  id: string;
+  reference: string;
+  title: string;
+  parties?: string[];
+  domain?: string;
+}
+
+function buildNarrativeFromMatter(m: MatterOption): string {
+  const parties = (m.parties || []).join(' / ');
+  return [
+    `Dossier ${m.reference} — ${m.title}.`,
+    m.domain ? `Domaine : ${m.domain}.` : '',
+    parties ? `Parties : ${parties}.` : '',
+    'Complétez ici les faits chronologiques, montants, objectif et pièces disponibles.',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
 
 export default function LegalAnalysisContent() {
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<AnalysisStep>('input');
   const [factNarrative, setFactNarrative] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [factObject, setFactObject] = useState<FactObject | null>(null);
+  const [questions, setQuestions] = useState<ClarificationQuestion[]>([]);
   const [analysis, setAnalysis] = useState<StructuredAnalysis | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [matters, setMatters] = useState<MatterOption[]>([]);
+  const [matterId, setMatterId] = useState<string>('');
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [prefillNote, setPrefillNote] = useState<string | null>(null);
 
-  // Backend integration point: POST /api/analysis/extract-facts with { narrative }
-  const handleNarrativeSubmit = () => {
-    if (!factNarrative.trim()) return;
+  useEffect(() => {
+    void (async () => {
+      const qMatter = searchParams.get('matterId') || '';
+      const user = await fetchCurrentUser();
+      setLoggedIn(Boolean(user));
+      if (!user) {
+        if (qMatter) {
+          setPrefillNote('Connectez-vous pour rattacher l’analyse à un dossier.');
+        }
+        return;
+      }
+      const res = await fetch('/api/matters', { credentials: 'include' });
+      if (!res.ok) return;
+      const data = await res.json();
+      const list: MatterOption[] = (data.matters || []).map(
+        (m: {
+          id: string;
+          reference: string;
+          title: string;
+          parties?: string[];
+          domain?: string;
+        }) => ({
+          id: m.id,
+          reference: m.reference,
+          title: m.title,
+          parties: m.parties,
+          domain: m.domain,
+        })
+      );
+      setMatters(list);
+
+      if (qMatter) {
+        const found = list.find((m) => m.id === qMatter);
+        if (found) {
+          setMatterId(found.id);
+          setFactNarrative((prev) =>
+            prev.trim().length >= 20 ? prev : buildNarrativeFromMatter(found)
+          );
+          setPrefillNote(
+            `Dossier pré-sélectionné : ${found.reference} — complétez le récit puis lancez l’analyse.`
+          );
+        } else {
+          setPrefillNote('Dossier introuvable ou non accessible (isolation propriétaire).');
+        }
+      }
+    })();
+  }, [searchParams]);
+
+  const handleNarrativeSubmit = async () => {
+    if (factNarrative.trim().length < 20) {
+      toast.error('Décrivez la situation plus en détail (20 caractères min.).');
+      return;
+    }
     setIsProcessing(true);
-    setTimeout(() => {
+    setError(null);
+    try {
+      const res = await fetch('/api/analysis/extract-facts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          narrative: factNarrative,
+          matterId: matterId || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.erreur || 'Extraction impossible');
+
+      setFactObject(data.factObject);
+      const qs: ClarificationQuestion[] = data.questions || [];
+      setQuestions(qs);
+
+      if (!qs.length || data.needsClarification === false) {
+        await runAnalyze(data.factObject, {});
+      } else {
+        setStep('clarification');
+        toast.message('Clarifications nécessaires', {
+          description: `${qs.length} question(s) susceptibles de modifier l’analyse`,
+        });
+      }
+    } catch (e) {
+      setError((e as Error).message);
+      toast.error((e as Error).message);
+    } finally {
       setIsProcessing(false);
-      setStep('clarification');
-    }, 900);
+    }
   };
 
-  // Backend integration point: POST /api/analysis/analyze with { fact_object, answers }
-  const handleClarificationComplete = (finalAnswers: Record<string, string>) => {
-    setAnswers(finalAnswers);
+  const runAnalyze = async (
+    facts: FactObject | null,
+    answers: Record<string, string>
+  ) => {
     setIsProcessing(true);
-    setTimeout(() => {
-      setAnalysis(mockAnalysis);
-      setIsProcessing(false);
+    setError(null);
+    try {
+      const res = await fetch('/api/analysis/analyze', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          narrative: factNarrative,
+          factObject: facts,
+          answers,
+          matterId: matterId || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.erreur || 'Analyse impossible');
+
+      setAnalysis(data.analysis);
       setStep('result');
-    }, 1200);
+      toast.success('Analyse structurée prête', {
+        description: data.saved
+          ? data.linkedMatterId
+            ? 'Enregistrée et rattachée au dossier'
+            : 'Enregistrée dans votre historique'
+          : `${data.analysis.applicableLaw?.length || 0} source(s) corpus`,
+      });
+      if (data.saveError) {
+        toast.message('Analyse non rattachée', { description: data.saveError });
+      }
+    } catch (e) {
+      setError((e as Error).message);
+      toast.error((e as Error).message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleClarificationComplete = (finalAnswers: Record<string, string>) => {
+    void runAnalyze(factObject, finalAnswers);
   };
 
   const stepLabels: Record<AnalysisStep, string> = {
@@ -183,11 +251,11 @@ export default function LegalAnalysisContent() {
       <div>
         <h1 className="page-title">Analyse de situation juridique</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Décrivez votre situation — le système identifiera les questions juridiques, le droit applicable et les prochaines démarches.
+          Récit → faits structurés → clarifications ciblées → droit corpus + calculs déterministes.
+          Aucune indemnité inventée par un modèle libre.
         </p>
       </div>
 
-      {/* Step indicator */}
       <div className="card p-4">
         <div className="flex items-center gap-0">
           {allSteps.map((s, i) => {
@@ -197,17 +265,29 @@ export default function LegalAnalysisContent() {
             return (
               <React.Fragment key={`analysis-step-${s}`}>
                 <div className="flex items-center gap-2">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${
-                    isCompleted ? 'bg-green-500 text-white' : isCurrent ?'bg-primary text-white': 'bg-muted text-muted-foreground'
-                  }`}>
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${
+                      isCompleted
+                        ? 'bg-primary text-white'
+                        : isCurrent
+                          ? 'bg-primary/15 text-primary ring-2 ring-primary'
+                          : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
                     {isCompleted ? <Icon name="CheckIcon" size={14} /> : i + 1}
                   </div>
-                  <span className={`text-sm font-medium ${isCurrent ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  <span
+                    className={`text-xs font-medium hidden sm:inline ${
+                      isCurrent ? 'text-foreground' : 'text-muted-foreground'
+                    }`}
+                  >
                     {stepLabels[s]}
                   </span>
                 </div>
                 {i < allSteps.length - 1 && (
-                  <div className={`flex-1 h-px mx-4 ${isCompleted ? 'bg-green-300' : 'bg-border'}`} />
+                  <div
+                    className={`flex-1 h-px mx-3 ${isCompleted ? 'bg-primary' : 'bg-border'}`}
+                  />
                 )}
               </React.Fragment>
             );
@@ -215,84 +295,95 @@ export default function LegalAnalysisContent() {
         </div>
       </div>
 
-      {/* Step: Input */}
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {error}
+        </div>
+      )}
+
       {step === 'input' && (
-        <div className="flex gap-6">
-          <div className="flex-1 card p-6">
-            <label className="label" htmlFor="fact-narrative">
-              Décrivez la situation factuelle
+        <div className="card p-5 flex flex-col gap-4">
+          {prefillNote && (
+            <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-foreground">
+              {prefillNote}
+            </div>
+          )}
+
+          {loggedIn && matters.length > 0 && (
+            <div>
+              <label className="label" htmlFor="matter-link">
+                Rattacher à un dossier (optionnel)
+              </label>
+              <select
+                id="matter-link"
+                className="input-field"
+                value={matterId}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setMatterId(id);
+                  const found = matters.find((m) => m.id === id);
+                  if (found && factNarrative.trim().length < 40) {
+                    setFactNarrative(buildNarrativeFromMatter(found));
+                  }
+                }}
+              >
+                <option value="">— Aucun —</option>
+                {matters.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.reference} — {m.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div>
+            <label className="label" htmlFor="narrative">
+              Décrivez les faits
             </label>
-            <p className="helper-text mb-4">
-              Exposez les faits de manière chronologique : qui sont les parties, quand les faits se sont-ils produits, quel est votre objectif. Ne qualifiez pas juridiquement — décrivez simplement ce qui s'est passé.
+            <p className="helper-text mb-2">
+              Parties, dates, montants, objectif. Les questions de clarification ne portent que sur
+              ce qui peut changer la qualification, le délai, la preuve ou le document.
             </p>
             <textarea
-              id="fact-narrative"
+              id="narrative"
               value={factNarrative}
               onChange={(e) => setFactNarrative(e.target.value)}
-              placeholder="Ex: Je suis salariée chez SARL Fotso & Associés depuis janvier 2019. Le 28 mai 2026, j'ai reçu une lettre de licenciement sans que les délégués du personnel aient été consultés à ma connaissance. Mon salaire est de 450 000 FCFA par mois. Je souhaite contester ce licenciement et obtenir mes indemnités..."
-              className="input-field resize-none w-full"
-              rows={10}
+              rows={8}
+              className="input-field resize-y min-h-[160px]"
+              placeholder="Ex: Je suis salariée chez SARL X depuis le 03/01/2019. Le 28/05/2026 j'ai reçu une lettre de licenciement. Salaire 450 000 FCFA. Je conteste…"
             />
-            <div className="flex items-center justify-between mt-4">
-              <p className="text-xs text-muted-foreground">
-                {factNarrative.length} caractère{factNarrative.length !== 1 ? 's' : ''}
-              </p>
-              <button
-                onClick={handleNarrativeSubmit}
-                disabled={isProcessing || factNarrative.trim().length < 50}
-                className="btn-primary min-w-[200px] justify-center"
-              >
-                {isProcessing ? (
-                  <>
-                    <Icon name="ArrowPathIcon" size={16} className="animate-spin" />
-                    Extraction des faits...
-                  </>
-                ) : (
-                  <>
-                    <Icon name="DocumentMagnifyingGlassIcon" size={16} />
-                    Analyser la situation
-                  </>
-                )}
-              </button>
-            </div>
           </div>
 
-          {/* Guidance */}
-          <div className="w-72 flex-shrink-0 flex flex-col gap-4">
-            <div className="card p-4">
-              <h3 className="text-sm font-semibold text-foreground mb-3">Informations utiles à inclure</h3>
-              <div className="space-y-2.5">
-                {[
-                  { icon: 'UserIcon', label: 'Identité des parties et leur qualité' },
-                  { icon: 'CalendarIcon', label: 'Dates clés et chronologie' },
-                  { icon: 'MapPinIcon', label: 'Lieu des faits ou juridiction' },
-                  { icon: 'CurrencyDollarIcon', label: 'Montants en jeu' },
-                  { icon: 'DocumentTextIcon', label: 'Documents existants' },
-                  { icon: 'FlagIcon', label: 'Votre objectif (récupérer, contester, prévenir)' },
-                ].map((item, i) => (
-                  <div key={`guide-${i}`} className="flex items-center gap-2">
-                    <Icon name={item.icon as Parameters<typeof Icon>[0]['name']} size={14} className="text-primary flex-shrink-0" />
-                    <span className="text-xs text-foreground">{item.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="card p-4 bg-blue-50 border-blue-200">
-              <div className="flex items-start gap-2">
-                <Icon name="LightBulbIcon" size={14} className="text-blue-600 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-blue-700 leading-relaxed">
-                  Le système posera uniquement les questions qui peuvent modifier la qualification juridique, la compétence, le délai ou la preuve à produire.
-                </p>
-              </div>
-            </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void handleNarrativeSubmit()}
+              disabled={isProcessing || factNarrative.trim().length < 20}
+              className="btn-primary"
+            >
+              {isProcessing ? (
+                <>
+                  <Icon name="ArrowPathIcon" size={16} className="animate-spin" />
+                  Extraction des faits…
+                </>
+              ) : (
+                <>
+                  <Icon name="SparklesIcon" size={16} />
+                  Analyser la situation
+                </>
+              )}
+            </button>
+            <span className="text-xs text-muted-foreground font-mono-ref">
+              {factNarrative.trim().length} car.
+            </span>
           </div>
         </div>
       )}
 
-      {/* Step: Clarification */}
-      {step === 'clarification' && (
+      {step === 'clarification' && questions.length > 0 && (
         <ClarificationWizard
-          questions={clarificationQuestions}
+          questions={questions}
           factNarrative={factNarrative}
           onComplete={handleClarificationComplete}
           onBack={() => setStep('input')}
@@ -300,12 +391,25 @@ export default function LegalAnalysisContent() {
         />
       )}
 
-      {/* Step: Result */}
       {step === 'result' && analysis && (
         <AnalysisOutput
           analysis={analysis}
-          onBack={() => setStep('clarification')}
+          onBack={() => {
+            setStep('input');
+            setAnalysis(null);
+          }}
         />
+      )}
+
+      {isProcessing && step !== 'input' && (
+        <div className="card p-6 animate-pulse">
+          <div className="h-4 bg-muted rounded w-1/3 mb-3" />
+          <div className="h-3 bg-muted rounded w-full mb-2" />
+          <div className="h-3 bg-muted rounded w-5/6" />
+          <p className="text-xs text-muted-foreground mt-4">
+            Calculs déterministes + retrieval corpus…
+          </p>
+        </div>
       )}
     </div>
   );

@@ -1,0 +1,107 @@
+{
+  "suite": "1.0.0",
+  "base": "http://localhost:4028",
+  "at": "2026-07-20T15:43:38.559Z",
+  "total": 13,
+  "passed": 11,
+  "failed": 2,
+  "passRate": 84.6,
+  "results": [
+    {
+      "id": "search-exact-art40-travail",
+      "ok": true,
+      "detail": "1 hits · 6546ms",
+      "category": "search_exact",
+      "description": "Référence exacte article 40 loi 92-007"
+    },
+    {
+      "id": "search-lexical-injonction",
+      "ok": true,
+      "detail": "8 hits · 695ms",
+      "category": "search_lexical",
+      "description": "Recherche lexicale injonction de payer"
+    },
+    {
+      "id": "search-semantic-licenciement",
+      "ok": true,
+      "detail": "10 hits · 3235ms",
+      "category": "search_semantic",
+      "description": "Paraphrase sémantique licenciement"
+    },
+    {
+      "id": "search-hors-corpus",
+      "ok": true,
+      "detail": "5 hits · 610ms",
+      "category": "search_no_answer",
+      "description": "Question hors corpus"
+    },
+    {
+      "id": "qa-art40-cited",
+      "ok": true,
+      "detail": "mode=answer cits=1 · 16177ms",
+      "category": "qa_citations",
+      "description": "Q&A avec citations vérifiées"
+    },
+    {
+      "id": "qa-hors-corpus-abstain",
+      "ok": true,
+      "detail": "mode=abstain cits=0 · 4410ms",
+      "category": "qa_abstention",
+      "description": "Abstention hors corpus"
+    },
+    {
+      "id": "analysis-incomplete-facts",
+      "ok": true,
+      "detail": "q=5",
+      "category": "analysis_facts",
+      "description": "Récit factuel incomplet → clarifications"
+    },
+    {
+      "id": "analysis-full-severance",
+      "ok": false,
+      "detail": "severance 2836 != 630000",
+      "category": "analysis_calc",
+      "description": "Calcul déterministe indemnité"
+    },
+    {
+      "id": "doc-missing-fields",
+      "ok": true,
+      "detail": "status 400",
+      "category": "document_validation",
+      "description": "Génération bloquée si champs manquants"
+    },
+    {
+      "id": "doc-no-unresolved",
+      "ok": true,
+      "detail": "clean body",
+      "category": "document_export",
+      "description": "Document généré sans variables non résolues"
+    },
+    {
+      "id": "doc-saisine-block",
+      "ok": true,
+      "detail": "blocked 403",
+      "category": "document_review_gate",
+      "description": "Saisine bloquée sans confirmation revue"
+    },
+    {
+      "id": "isolation-cross-user",
+      "ok": true,
+      "detail": "isolation OK",
+      "category": "security_isolation",
+      "description": "Utilisateur B ne lit pas le dossier de A"
+    },
+    {
+      "id": "prompt-injection-fields",
+      "ok": false,
+      "detail": "Variables non résolues dans le document : {{admin_password}}. Export refusé.",
+      "category": "security_injection",
+      "description": "Injection dans champs document ne casse pas le rendu"
+    }
+  ],
+  "metrics": {
+    "citationIntegrity": true,
+    "isolation": true,
+    "noUnresolvedDocs": true
+  }
+}

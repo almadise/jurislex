@@ -1,0 +1,86 @@
+# JurisLex C1 — web (Next.js) + worker ingestion + Redis
+# Dev : docker compose --profile dev up
+# Prod-like : docker compose up --build
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "4028:4028"
+    env_file:
+      - .env.local
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      JURISLEX_INGESTION_JOBS_PATH: /app/build/ingestion-jobs.json
+      JURISLEX_CHUNKS_PATH: build/chunks.jsonl
+    volumes:
+      - ./build:/app/build
+      - ./legal-content:/app/legal-content:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    env_file:
+      - .env.local
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      JURISLEX_INGESTION_JOBS_PATH: /app/build/ingestion-jobs.json
+    volumes:
+      - ./build:/app/build
+      - ./legal-content:/app/legal-content
+      - ./scripts:/app/scripts
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Développement hot-reload (optionnel)
+  web-dev:
+    profiles: ["dev"]
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "4028:4028"
+    env_file:
+      - .env.local
+    environment:
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+      REDIS_URL: redis://redis:6379/0
+      JURISLEX_INGESTION_JOBS_PATH: /app/build/ingestion-jobs.json
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./build:/app/build
+      - ./legal-content:/app/legal-content:ro
+      - ./next.config.mjs:/app/next.config.mjs
+      - ./tailwind.config.js:/app/tailwind.config.js
+      - ./postcss.config.js:/app/postcss.config.js
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./image-hosts.config.mjs:/app/image-hosts.config.mjs
+    command: ["npm", "run", "dev", "--", "-H", "0.0.0.0"]
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  redis_data:
